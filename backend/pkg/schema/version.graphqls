@@ -3,6 +3,7 @@ type ServerInfo {
   commit: String!
   date: String!
   builtBy: String!
+  currentDateTime: String!
 }
 
 type Query {

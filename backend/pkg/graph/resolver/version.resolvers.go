@@ -6,6 +6,7 @@ package resolver
 
 import (
 	"context"
+	"time"
 
 	"github.com/tangxusc/ar/backend/pkg/command"
 	"github.com/tangxusc/ar/backend/pkg/graph"
@@ -15,10 +16,11 @@ import (
 // ServerInfo is the resolver for the serverInfo field.
 func (r *queryResolver) ServerInfo(ctx context.Context) (*model.ServerInfo, error) {
 	return &model.ServerInfo{
-		Version: command.Version,
-		Commit:  command.Commit,
-		Date:    command.Date,
-		BuiltBy: command.BuiltBy,
+		Version:         command.Version,
+		Commit:          command.Commit,
+		Date:            command.Date,
+		BuiltBy:         command.BuiltBy,
+		CurrentDateTime: time.Now().Format(time.DateTime),
 	}, nil
 }
 

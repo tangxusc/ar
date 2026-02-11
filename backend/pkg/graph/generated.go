@@ -74,10 +74,11 @@ type ComplexityRoot struct {
 	}
 
 	ServerInfo struct {
-		BuiltBy func(childComplexity int) int
-		Commit  func(childComplexity int) int
-		Date    func(childComplexity int) int
-		Version func(childComplexity int) int
+		BuiltBy         func(childComplexity int) int
+		Commit          func(childComplexity int) int
+		CurrentDateTime func(childComplexity int) int
+		Date            func(childComplexity int) int
+		Version         func(childComplexity int) int
 	}
 }
 
@@ -221,6 +222,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ServerInfo.Commit(childComplexity), true
+
+	case "ServerInfo.currentDateTime":
+		if e.complexity.ServerInfo.CurrentDateTime == nil {
+			break
+		}
+
+		return e.complexity.ServerInfo.CurrentDateTime(childComplexity), true
 
 	case "ServerInfo.date":
 		if e.complexity.ServerInfo.Date == nil {
@@ -399,6 +407,7 @@ type Mutation {
   commit: String!
   date: String!
   builtBy: String!
+  currentDateTime: String!
 }
 
 type Query {
@@ -1101,6 +1110,8 @@ func (ec *executionContext) fieldContext_Query_serverInfo(_ context.Context, fie
 				return ec.fieldContext_ServerInfo_date(ctx, field)
 			case "builtBy":
 				return ec.fieldContext_ServerInfo_builtBy(ctx, field)
+			case "currentDateTime":
+				return ec.fieldContext_ServerInfo_currentDateTime(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ServerInfo", field.Name)
 		},
@@ -1401,6 +1412,50 @@ func (ec *executionContext) _ServerInfo_builtBy(ctx context.Context, field graph
 }
 
 func (ec *executionContext) fieldContext_ServerInfo_builtBy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ServerInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ServerInfo_currentDateTime(ctx context.Context, field graphql.CollectedField, obj *model.ServerInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ServerInfo_currentDateTime(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrentDateTime, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ServerInfo_currentDateTime(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ServerInfo",
 		Field:      field,
@@ -3667,6 +3722,11 @@ func (ec *executionContext) _ServerInfo(ctx context.Context, sel ast.SelectionSe
 			}
 		case "builtBy":
 			out.Values[i] = ec._ServerInfo_builtBy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "currentDateTime":
+			out.Values[i] = ec._ServerInfo_currentDateTime(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

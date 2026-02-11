@@ -43,10 +43,11 @@ type Query struct {
 }
 
 type ServerInfo struct {
-	Version string `json:"version"`
-	Commit  string `json:"commit"`
-	Date    string `json:"date"`
-	BuiltBy string `json:"builtBy"`
+	Version         string `json:"version"`
+	Commit          string `json:"commit"`
+	Date            string `json:"date"`
+	BuiltBy         string `json:"builtBy"`
+	CurrentDateTime string `json:"currentDateTime"`
 }
 
 type UpdateNodeInput struct {
