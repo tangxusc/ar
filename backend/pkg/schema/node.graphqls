@@ -46,3 +46,7 @@ type Mutation {
   deleteNode(input: DeleteNodeInput!): NodeList!
 }
 
+extend type Query {
+  nodes: [Node!]!
+  node(ip: String!): Node
+}

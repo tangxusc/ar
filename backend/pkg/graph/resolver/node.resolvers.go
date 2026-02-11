@@ -89,6 +89,35 @@ func (r *mutationResolver) DeleteNode(ctx context.Context, input model.DeleteNod
 	return loadAllNodes()
 }
 
+// Nodes is the resolver for the nodes field.
+func (r *queryResolver) Nodes(ctx context.Context) ([]*model.Node, error) {
+	nodes, err := loadAllNodes()
+	if err != nil {
+		return nil, err
+	}
+	return nodes.Nodes, nil
+}
+
+// Node is the resolver for the node field.
+func (r *queryResolver) Node(ctx context.Context, ip string) (*model.Node, error) {
+	path := nodeFilePath(ip)
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("node %s not found", ip)
+		}
+		return nil, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var n model.Node
+	if err := json.Unmarshal(data, &n); err != nil {
+		return nil, err
+	}
+	return &n, nil
+}
+
 // Mutation returns graph.MutationResolver implementation.
 func (r *Resolver) Mutation() graph.MutationResolver { return &mutationResolver{r} }
 

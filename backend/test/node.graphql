@@ -1,0 +1,89 @@
+mutation {
+  addNode(input: {
+    ip: "192.168.0.10"
+    port: "22"
+    username: "root"
+    password: "123456"
+    labels: [
+      { key: "env", value: "dev" }
+      { key: "zone", value: "shanghai" }
+    ]
+  }) {
+    nodes {
+      ip
+      port
+      username
+      password
+      labels {
+        key
+        value
+      }
+    }
+  }
+}
+
+mutation {
+  updateNode(input: {
+    ip: "192.168.0.10"
+    port: "2222"
+    username: "root"
+    password: "654321"
+    labels: [
+      { key: "env", value: "dev" }
+    ]
+  }) {
+    nodes {
+      ip
+      port
+      username
+      password
+      labels {
+        key
+        value
+      }
+    }
+  }
+}
+
+mutation {
+  deleteNode(input: {
+    ip: "192.168.0.10"
+  }) {
+    nodes {
+      ip
+      port
+      username
+      password
+      labels {
+        key
+        value
+      }
+    }
+  }
+}
+
+query {
+  nodes {
+      ip
+      port
+      username
+      password
+      labels {
+        key
+        value
+      }
+  }
+}
+
+query {
+  node(ip: "192.168.0.10") {
+    ip
+    port
+    username
+    password
+    labels {
+      key
+      value
+    }
+  }
+}
