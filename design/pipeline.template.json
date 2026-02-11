@@ -1,0 +1,41 @@
+[
+    {
+        "name": "pipeline_name1",
+        "image": "oci image",
+        "entrypoint": "entrypoint",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "env": [
+            "env1=value1",
+            "env2=value2",
+            "target_host={{node_ip}}",
+            "target_port={{node_port}}",
+            "target_username={{node_username}}",
+            "target_password={{node_password}}",
+            "target_labels={{node_labels}}"
+        ],
+        "nodes": [
+            "pipeline_name2"
+        ]
+    },
+    {
+        "name": "pipeline_name2",
+        "image": "oci image",
+        "entrypoint": "entrypoint",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "env": [
+            "env1=value1",
+            "env2=value2",
+            "target_host={{node_ip}}",
+            "target_port={{node_port}}",
+            "target_username={{node_username}}",
+            "target_password={{node_password}}",
+            "target_labels={{node_labels}}"
+        ]
+    }
+]

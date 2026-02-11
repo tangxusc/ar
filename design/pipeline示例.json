@@ -1,0 +1,31 @@
+[
+    {
+        "name": "pipeline_name1",
+        "image": "oci image",
+        "entrypoint": "entrypoint",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "env": [
+            "env1=value1",
+            "env2=value2"
+        ],
+        "nodes": [
+            "pipeline_name2"
+        ]
+    },
+    {
+        "name": "pipeline_name2",
+        "image": "oci image",
+        "entrypoint": "entrypoint",
+        "args": [
+            "arg1",
+            "arg2"
+        ],
+        "env": [
+            "env1=value1",
+            "env2=value2"
+        ]
+    }
+]
