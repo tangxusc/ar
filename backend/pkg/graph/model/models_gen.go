@@ -2,6 +2,43 @@
 
 package model
 
+type AddNodeInput struct {
+	IP       string        `json:"ip"`
+	Port     *string       `json:"port,omitempty"`
+	Username string        `json:"username"`
+	Password string        `json:"password"`
+	Labels   []*LabelInput `json:"labels"`
+}
+
+type DeleteNodeInput struct {
+	IP string `json:"ip"`
+}
+
+type Label struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type LabelInput struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type Mutation struct {
+}
+
+type Node struct {
+	IP       string   `json:"ip"`
+	Port     *string  `json:"port,omitempty"`
+	Username string   `json:"username"`
+	Password string   `json:"password"`
+	Labels   []*Label `json:"labels"`
+}
+
+type NodeList struct {
+	Nodes []*Node `json:"nodes"`
+}
+
 type Query struct {
 }
 
@@ -10,4 +47,12 @@ type ServerInfo struct {
 	Commit  string `json:"commit"`
 	Date    string `json:"date"`
 	BuiltBy string `json:"builtBy"`
+}
+
+type UpdateNodeInput struct {
+	IP       string        `json:"ip"`
+	Port     *string       `json:"port,omitempty"`
+	Username string        `json:"username"`
+	Password string        `json:"password"`
+	Labels   []*LabelInput `json:"labels"`
 }

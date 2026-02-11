@@ -1,4 +1,4 @@
-APP_NAME := ar
+APP_NAME := allrun
 PKG_PATH := github.com/tangxusc/ar/backend/pkg/command
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")

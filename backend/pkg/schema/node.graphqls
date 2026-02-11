@@ -1,0 +1,48 @@
+type Label {
+  key: String!
+  value: String!
+}
+
+type Node {
+  ip: String!
+  port: String
+  username: String!
+  password: String!
+  labels: [Label!]!
+}
+
+type NodeList {
+  nodes: [Node!]!
+}
+
+input LabelInput {
+  key: String!
+  value: String!
+}
+
+input AddNodeInput {
+  ip: String!
+  port: String
+  username: String!
+  password: String!
+  labels: [LabelInput!]!
+}
+
+input UpdateNodeInput {
+  ip: String!
+  port: String
+  username: String!
+  password: String!
+  labels: [LabelInput!]!
+}
+
+input DeleteNodeInput {
+  ip: String!
+}
+
+type Mutation {
+  addNode(input: AddNodeInput!): NodeList!
+  updateNode(input: UpdateNodeInput!): NodeList!
+  deleteNode(input: DeleteNodeInput!): NodeList!
+}
+

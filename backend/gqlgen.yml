@@ -1,5 +1,5 @@
 schema:
-  - pkg/graph/*.graphqls
+  - pkg/schema/*.graphqls
 exec:
   filename: pkg/graph/generated.go
   package: graph
@@ -8,8 +8,8 @@ model:
   package: model
 resolver:
   layout: follow-schema
-  dir: pkg/graph
-  package: graph
+  dir: pkg/graph/resolver
+  package: resolver
   filename_template: "{name}.resolvers.go"
 autobind:
   - github.com/tangxusc/ar/backend/pkg/graph/model

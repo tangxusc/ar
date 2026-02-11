@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/tangxusc/ar/backend/pkg/graph"
+	"github.com/tangxusc/ar/backend/pkg/graph/resolver"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
@@ -15,7 +16,7 @@ import (
 
 func Start(ctx context.Context) error {
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
-		Resolvers: &graph.Resolver{},
+		Resolvers: &resolver.Resolver{},
 	}))
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
