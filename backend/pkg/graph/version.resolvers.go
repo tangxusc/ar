@@ -6,11 +6,19 @@ package graph
 
 import (
 	"context"
+
+	"github.com/tangxusc/ar/backend/pkg/command"
+	"github.com/tangxusc/ar/backend/pkg/graph/model"
 )
 
-// Empty is the resolver for the _empty field.
-func (r *queryResolver) Empty(ctx context.Context) (*string, error) {
-	return nil, nil
+// ServerInfo is the resolver for the serverInfo field.
+func (r *queryResolver) ServerInfo(ctx context.Context) (*model.ServerInfo, error) {
+	return &model.ServerInfo{
+		Version: command.Version,
+		Commit:  command.Commit,
+		Date:    command.Date,
+		BuiltBy: command.BuiltBy,
+	}, nil
 }
 
 // Query returns QueryResolver implementation.

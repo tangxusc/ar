@@ -1,4 +1,0 @@
-# 最小 schema，保证服务可启动；后续可在此扩展 RunPipeline 等
-type Query {
-  _empty: String
-}

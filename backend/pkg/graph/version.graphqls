@@ -1,0 +1,10 @@
+type ServerInfo {
+  version: String!
+  commit: String!
+  date: String!
+  builtBy: String!
+}
+
+type Query {
+  serverInfo: ServerInfo!
+}
