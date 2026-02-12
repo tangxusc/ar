@@ -7,23 +7,20 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tangxusc/ar/backend/pkg/config"
 	"github.com/tangxusc/ar/backend/pkg/graph/model"
 )
 
-const (
-	nodesDir = "/var/lib/ar/nodes"
-)
-
 func nodeFilePath(ip string) string {
-	return filepath.Join(nodesDir, fmt.Sprintf("node_%s.json", ip))
+	return filepath.Join(config.NodesDir, fmt.Sprintf("node_%s.json", ip))
 }
 func loadAllNodes() (*model.NodeList, error) {
-	if _, err := os.Stat(nodesDir); os.IsNotExist(err) {
+	if _, err := os.Stat(config.NodesDir); os.IsNotExist(err) {
 		// 目录不存在时返回空列表
 		return &model.NodeList{Nodes: []*model.Node{}}, nil
 	}
 
-	entries, err := os.ReadDir(nodesDir)
+	entries, err := os.ReadDir(config.NodesDir)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +34,7 @@ func loadAllNodes() (*model.NodeList, error) {
 		if !strings.HasPrefix(name, "node_") || !strings.HasSuffix(name, ".json") {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(nodesDir, name))
+		data, err := os.ReadFile(filepath.Join(config.NodesDir, name))
 		if err != nil {
 			return nil, err
 		}
@@ -52,7 +49,7 @@ func loadAllNodes() (*model.NodeList, error) {
 	return &model.NodeList{Nodes: nodes}, nil
 }
 func saveNode(n *model.Node) error {
-	if err := os.MkdirAll(nodesDir, 0o755); err != nil {
+	if err := os.MkdirAll(config.NodesDir, 0o755); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(n, "", "  ")
