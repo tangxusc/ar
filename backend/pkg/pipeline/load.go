@@ -452,6 +452,22 @@ func normalizeArchiveToTar(archivePath string) (string, func(), error) {
 	}
 	defer in.Close()
 
+	header := make([]byte, 2)
+	n, err := io.ReadFull(in, header)
+	if err != nil {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return "", cleanup, fmt.Errorf("归档文件过小，无法解析: %s", archivePath)
+		}
+		return "", cleanup, fmt.Errorf("读取归档头失败: %w", err)
+	}
+	if !isGzipHeader(header[:n]) {
+		// 兼容后缀为 .tar.gz/.tgz 但内容实际是 tar 的归档。
+		return archivePath, cleanup, nil
+	}
+	if _, err := in.Seek(0, io.SeekStart); err != nil {
+		return "", cleanup, fmt.Errorf("重置归档读取位置失败: %w", err)
+	}
+
 	gzReader, err := gzip.NewReader(in)
 	if err != nil {
 		return "", cleanup, fmt.Errorf("解压归档失败: %w", err)
@@ -700,6 +716,10 @@ func containsEnvKey(env []string, key string) bool {
 		}
 	}
 	return false
+}
+
+func isGzipHeader(header []byte) bool {
+	return len(header) >= 2 && header[0] == 0x1f && header[1] == 0x8b
 }
 
 func fileOpener(path string) tarball.Opener {
