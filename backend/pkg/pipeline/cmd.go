@@ -23,7 +23,7 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 				config.PipelinesDir,
 				config.ImagesStoreDir,
 				config.LoadTmpRoot,
-				config.OciRuntimeBinary,
+				config.OciRuntimeRoot,
 			)
 			return loader.Load(ctx, inputArchive)
 		},

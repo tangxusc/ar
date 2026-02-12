@@ -10,10 +10,10 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -22,6 +22,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/opencontainers/runc/libcontainer"
+	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/specconv"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 )
@@ -32,15 +35,15 @@ type Loader struct {
 	pipelinesDir   string
 	imagesStoreDir string
 	tmpRoot        string
-	runtimeBinary  string
+	runtimeRoot    string
 }
 
-func NewLoader(pipelinesDir, imagesStoreDir, tmpRoot, runtimeBinary string) *Loader {
+func NewLoader(pipelinesDir, imagesStoreDir, tmpRoot, runtimeRoot string) *Loader {
 	return &Loader{
 		pipelinesDir:   pipelinesDir,
 		imagesStoreDir: imagesStoreDir,
 		tmpRoot:        tmpRoot,
-		runtimeBinary:  runtimeBinary,
+		runtimeRoot:    runtimeRoot,
 	}
 }
 
@@ -87,7 +90,7 @@ func (l *Loader) Load(ctx context.Context, archivePath string) error {
 
 	containerID := fmt.Sprintf("ar_load_%d", time.Now().UnixNano())
 	logrus.Infof("开始运行一次性流水线容器: %s", containerID)
-	if err := runOneShotContainer(ctx, l.runtimeBinary, bundleDir, containerID); err != nil {
+	if err := runOneShotContainer(ctx, l.runtimeRoot, bundleDir, containerID); err != nil {
 		return err
 	}
 
@@ -136,19 +139,147 @@ func (l *Loader) loadAllImagesFromDir(imagesDir string) (int, error) {
 	return loaded, nil
 }
 
-func runOneShotContainer(ctx context.Context, runtimeBinary, bundleDir, containerID string) error {
-	if _, err := exec.LookPath(runtimeBinary); err != nil {
-		return fmt.Errorf("未找到 OCI runtime 二进制 %q: %w", runtimeBinary, err)
+func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerID string) error {
+	if strings.TrimSpace(runtimeRoot) == "" {
+		return fmt.Errorf("OCI runtime state root 不能为空")
 	}
 
+	spec, err := readRuntimeSpec(bundleDir)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(runtimeRoot, 0700); err != nil {
+		return fmt.Errorf("创建 OCI runtime state root 失败 %s: %w", runtimeRoot, err)
+	}
+
+	oldWD, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("获取当前工作目录失败: %w", err)
+	}
+	if err := os.Chdir(bundleDir); err != nil {
+		return fmt.Errorf("切换到 bundle 目录失败 %s: %w", bundleDir, err)
+	}
+	defer func() {
+		_ = os.Chdir(oldWD)
+	}()
+
+	rootless := os.Geteuid() != 0
+	containerCfg, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
+		CgroupName:      containerID,
+		Spec:            spec,
+		RootlessEUID:    rootless,
+		RootlessCgroups: rootless,
+	})
+	if err != nil {
+		return fmt.Errorf("根据 OCI spec 构建容器配置失败: %w", err)
+	}
+
+	container, err := libcontainer.Create(runtimeRoot, containerID, containerCfg)
+	if err != nil {
+		return fmt.Errorf("创建 OCI 容器失败: %w", err)
+	}
+	defer func() {
+		_ = container.Destroy()
+	}()
+
 	var out bytes.Buffer
-	cmd := exec.CommandContext(ctx, runtimeBinary, "run", "--bundle", bundleDir, containerID)
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	if err := cmd.Run(); err != nil {
+	process, err := toLibcontainerProcess(spec.Process, &out)
+	if err != nil {
+		return err
+	}
+	process.Init = true
+
+	if err := container.Run(process); err != nil {
 		return fmt.Errorf("一次性容器运行失败: %w, 输出: %s", err, strings.TrimSpace(out.String()))
 	}
-	return nil
+
+	type waitResult struct {
+		state *os.ProcessState
+		err   error
+	}
+	waitCh := make(chan waitResult, 1)
+	go func() {
+		state, waitErr := process.Wait()
+		waitCh <- waitResult{state: state, err: waitErr}
+	}()
+
+	select {
+	case r := <-waitCh:
+		if r.err != nil {
+			return fmt.Errorf("等待一次性容器退出失败: %w, 输出: %s", r.err, strings.TrimSpace(out.String()))
+		}
+		if code := r.state.ExitCode(); code != 0 {
+			return fmt.Errorf("一次性容器退出码非 0: %d, 输出: %s", code, strings.TrimSpace(out.String()))
+		}
+		return nil
+	case <-ctx.Done():
+		_ = container.Signal(syscall.SIGKILL)
+		<-waitCh
+		return fmt.Errorf("一次性容器运行被取消: %w, 输出: %s", ctx.Err(), strings.TrimSpace(out.String()))
+	}
+}
+
+func readRuntimeSpec(bundleDir string) (*specs.Spec, error) {
+	specPath := filepath.Join(bundleDir, "config.json")
+	specBytes, err := os.ReadFile(specPath)
+	if err != nil {
+		return nil, fmt.Errorf("读取 OCI spec 失败 %s: %w", specPath, err)
+	}
+
+	var spec specs.Spec
+	if err := json.Unmarshal(specBytes, &spec); err != nil {
+		return nil, fmt.Errorf("解析 OCI spec 失败 %s: %w", specPath, err)
+	}
+	if spec.Process == nil {
+		return nil, fmt.Errorf("OCI spec 缺少 process 配置")
+	}
+	if len(spec.Process.Args) == 0 {
+		return nil, fmt.Errorf("OCI spec 缺少 process.args，无法运行一次性容器")
+	}
+	if strings.TrimSpace(spec.Process.Cwd) == "" {
+		spec.Process.Cwd = "/"
+	}
+	return &spec, nil
+}
+
+func toLibcontainerProcess(processSpec *specs.Process, output *bytes.Buffer) (*libcontainer.Process, error) {
+	if processSpec.Terminal {
+		return nil, fmt.Errorf("一次性容器暂不支持 terminal=true")
+	}
+
+	p := &libcontainer.Process{
+		Args:            append([]string{}, processSpec.Args...),
+		Env:             append([]string{}, processSpec.Env...),
+		UID:             int(processSpec.User.UID),
+		GID:             int(processSpec.User.GID),
+		Cwd:             processSpec.Cwd,
+		Stdout:          output,
+		Stderr:          output,
+		Label:           processSpec.SelinuxLabel,
+		AppArmorProfile: processSpec.ApparmorProfile,
+	}
+	noNewPrivileges := processSpec.NoNewPrivileges
+	p.NoNewPrivileges = &noNewPrivileges
+
+	if len(processSpec.User.AdditionalGids) > 0 {
+		p.AdditionalGroups = make([]int, 0, len(processSpec.User.AdditionalGids))
+		for _, gid := range processSpec.User.AdditionalGids {
+			p.AdditionalGroups = append(p.AdditionalGroups, int(gid))
+		}
+	}
+
+	if caps := processSpec.Capabilities; caps != nil {
+		p.Capabilities = &configs.Capabilities{
+			Bounding:    append([]string{}, caps.Bounding...),
+			Effective:   append([]string{}, caps.Effective...),
+			Inheritable: append([]string{}, caps.Inheritable...),
+			Permitted:   append([]string{}, caps.Permitted...),
+			Ambient:     append([]string{}, caps.Ambient...),
+		}
+	}
+
+	return p, nil
 }
 
 func writeRuntimeSpec(bundleDir string, image v1.Image, pipelinesDir, runtimeImagesDir string) error {
