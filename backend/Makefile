@@ -8,6 +8,11 @@ BUILT_BY:= $(shell whoami 2>/dev/null || echo "unknown")
 
 .PHONY: build
 build:
+	go get github.com/99designs/gqlgen/codegen/config@v0.17.86
+	go get github.com/99designs/gqlgen/internal/imports@v0.17.86
+	go get github.com/99designs/gqlgen/codegen/config@v0.17.86
+	go get github.com/99designs/gqlgen/api@v0.17.86
+	go get github.com/99designs/gqlgen@v0.17.86
 	go run github.com/99designs/gqlgen generate
 	GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org go build -o $(APP_NAME) \
 		-ldflags "\

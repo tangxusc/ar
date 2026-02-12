@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tangxusc/ar/backend/pkg/command"
 	"github.com/tangxusc/ar/backend/pkg/config"
+	"github.com/tangxusc/ar/backend/pkg/container"
 )
 
 var webServerPort string = "8080"
@@ -42,7 +43,7 @@ func initLog() (io.Writer, error) {
 		logrus.SetReportCaller(true)
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
-		logrus.SetLevel(logrus.InfoLevel)
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 	return writer, nil
 }
@@ -84,7 +85,7 @@ func AddCommand(ctx context.Context, cancelFunc func(), rootCommand *cobra.Comma
 		Short: `停止后端：按前缀清理 OCI 容器，并停止本地 gin server`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ociContainerRemove {
-				if err := stopAndRemoveOCIContainers(config.OciRuntimeRoot, containerNamePrefix); err != nil {
+				if err := container.StopAndRemoveOCIContainers(config.OciRuntimeRoot, containerNamePrefix); err != nil {
 					logrus.Warnf("按前缀清理 OCI 容器时出错（可忽略）: %v", err)
 				}
 			}

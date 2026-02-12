@@ -9,7 +9,6 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	github.com/vektah/gqlparser/v2 v2.5.31
-	golang.org/x/net v0.48.0
 )
 
 replace github.com/bytedance/sonic => github.com/bytedance/sonic v1.9.1
@@ -61,6 +60,7 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	golang.org/x/arch v0.7.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect

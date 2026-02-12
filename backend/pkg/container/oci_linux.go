@@ -1,6 +1,6 @@
 //go:build linux
 
-package web
+package container
 
 import (
 	"errors"
@@ -14,9 +14,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// stopAndRemoveOCIContainers 使用 libcontainer 按 OCI Runtime 规范停止并删除指定前缀的容器。
+// StopAndRemoveOCIContainers 使用 libcontainer 按 OCI Runtime 规范停止并删除指定前缀的容器。
 // 实现思路参考 runc list：读取 root 目录下的子目录作为容器 ID，Load 后按前缀过滤，再根据状态 Signal + Destroy。
-func stopAndRemoveOCIContainers(root, prefix string) error {
+func StopAndRemoveOCIContainers(root, prefix string) error {
 	// 允许关闭：若前缀为空，直接返回，避免误操作所有容器。
 	if strings.TrimSpace(prefix) == "" {
 		logrus.Warn("未指定容器前缀，跳过 OCI 容器清理")
@@ -26,8 +26,7 @@ func stopAndRemoveOCIContainers(root, prefix string) error {
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			// 视为没有任何容器，保持与原 buildah 行为一致：仅记录调试日志，不视为错误。
-			logrus.Debugf("OCI runtime root %s 不存在，跳过容器清理", root)
+			logrus.Warnf("OCI runtime root %s 不存在，跳过容器清理", root)
 			return nil
 		}
 		logrus.Warnf("读取 OCI runtime root %s 失败: %v", root, err)
@@ -93,7 +92,7 @@ func stopAndRemoveOCIContainers(root, prefix string) error {
 		// Destroy 对于已停止的容器是幂等的；即使容器仍在运行也会返回错误，我们只记录日志不终止整体流程。
 		if err := c.Destroy(); err != nil {
 			// 若 state 目录已不存在，视为已被其他进程删除。
-			if isNotExistErr(err) {
+			if IsNotExistErr(err) {
 				logrus.Debugf("容器 %s 的 state 已不存在，视为已删除: %v", id, err)
 				continue
 			}
@@ -106,8 +105,8 @@ func stopAndRemoveOCIContainers(root, prefix string) error {
 	return nil
 }
 
-// isNotExistErr 尝试判断 Destroy 过程中是否是「state 目录不存在」类错误。
-func isNotExistErr(err error) bool {
+// IsNotExistErr 尝试判断 Destroy 过程中是否是「state 目录不存在」类错误。
+func IsNotExistErr(err error) bool {
 	if errors.Is(err, os.ErrNotExist) {
 		return true
 	}
@@ -122,4 +121,3 @@ func isNotExistErr(err error) bool {
 		strings.Contains(msg, "not exist") ||
 		strings.Contains(msg, string(filepath.Separator)+"state")
 }
-
