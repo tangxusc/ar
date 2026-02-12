@@ -2,9 +2,11 @@ package web
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
+	"github.com/tangxusc/ar/backend/pkg/config"
 	"github.com/tangxusc/ar/backend/pkg/graph"
 	"github.com/tangxusc/ar/backend/pkg/graph/resolver"
 
@@ -14,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Start(ctx context.Context) error {
+func Start(ctx context.Context, logWriter io.Writer) error {
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &resolver.Resolver{},
 	}))
@@ -23,6 +25,16 @@ func Start(ctx context.Context) error {
 	srv.AddTransport(transport.POST{})
 
 	r := gin.Default()
+	if !config.Debug {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+	gin.DefaultWriter = logWriter
+	gin.DefaultErrorWriter = logWriter
+
+	logrus.Infof("Start web server on port %s", webServerPort)
+	logrus.Infof("GraphQL API address: http://localhost:%s/graphql", webServerPort)
 	r.Any("/graphql", gin.WrapH(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		srv.ServeHTTP(w, req)
 	})))

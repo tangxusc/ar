@@ -43,7 +43,7 @@ func initLog() (io.Writer, error) {
 		logrus.SetReportCaller(true)
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
-		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetLevel(logrus.InfoLevel)
 	}
 	return writer, nil
 }
@@ -61,14 +61,14 @@ func AddCommand(ctx context.Context, cancelFunc func(), rootCommand *cobra.Comma
 			defer func() {
 				cancelFunc()
 			}()
-			_, err := initLog()
+			logWriter, err := initLog()
 			if err != nil {
 				return err
 			}
 			if err := writePIDFile(pidFilePath); err != nil {
 				return err
 			}
-			if err := Start(ctx); err != nil {
+			if err := Start(ctx, logWriter); err != nil {
 				return err
 			}
 			<-ctx.Done()
