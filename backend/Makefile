@@ -8,8 +8,8 @@ BUILT_BY:= $(shell whoami 2>/dev/null || echo "unknown")
 
 .PHONY: build
 build:
-	gqlgen generate
-	go build -o $(APP_NAME) \
+	go run github.com/99designs/gqlgen generate
+	GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org go build -o $(APP_NAME) \
 		-ldflags "\
 			-X '$(PKG_PATH).Version=$(VERSION)' \
 			-X '$(PKG_PATH).Commit=$(COMMIT)' \
@@ -18,3 +18,7 @@ build:
 		" \
 		main.go
 
+
+.PHONY: run
+run:
+	go run main.go server start
