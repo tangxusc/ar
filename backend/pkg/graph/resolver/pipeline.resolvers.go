@@ -7,17 +7,16 @@ package resolver
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/tangxusc/ar/backend/pkg/graph/model"
 )
 
 // Pipelines is the resolver for the pipelines field.
 func (r *queryResolver) Pipelines(ctx context.Context) ([]*model.Pipeline, error) {
-	panic(fmt.Errorf("not implemented: Pipelines - pipelines"))
+	return loadAllPipelines()
 }
 
 // Pipeline is the resolver for the pipeline field.
 func (r *queryResolver) Pipeline(ctx context.Context, name string) (*model.Pipeline, error) {
-	panic(fmt.Errorf("not implemented: Pipeline - pipeline"))
+	return loadPipelineByName(name)
 }

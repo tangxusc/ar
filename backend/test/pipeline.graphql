@@ -1,0 +1,13 @@
+query {
+  pipelines {
+    name
+    dag
+  }
+}
+
+query {
+  pipeline(name: "pipeline-alpine") {
+    name
+    dag
+  }
+}
