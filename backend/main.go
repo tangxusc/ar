@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tangxusc/ar/backend/pkg/command"
+	"github.com/tangxusc/ar/backend/pkg/pipeline"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -18,6 +19,7 @@ func NewCommand() (*cobra.Command, context.Context, context.CancelFunc) {
 
 	command.AddVersionCommand(rootCommand)
 	web.AddCommand(ctx, cancelFunc, rootCommand)
+	pipeline.AddCommand(ctx, rootCommand)
 	command.BuildCommands(ctx, cancelFunc, rootCommand)
 
 	return rootCommand, ctx, cancelFunc
