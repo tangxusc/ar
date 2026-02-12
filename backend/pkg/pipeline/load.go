@@ -148,6 +148,9 @@ func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerI
 	if err != nil {
 		return err
 	}
+	if err := ensureRootlessRuntimeSpec(spec); err != nil {
+		return err
+	}
 
 	if err := os.MkdirAll(runtimeRoot, 0700); err != nil {
 		return fmt.Errorf("创建 OCI runtime state root 失败 %s: %w", runtimeRoot, err)
@@ -164,12 +167,11 @@ func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerI
 		_ = os.Chdir(oldWD)
 	}()
 
-	rootless := os.Geteuid() != 0
 	containerCfg, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:      containerID,
 		Spec:            spec,
-		RootlessEUID:    rootless,
-		RootlessCgroups: rootless,
+		RootlessEUID:    true,
+		RootlessCgroups: true,
 	})
 	if err != nil {
 		return fmt.Errorf("根据 OCI spec 构建容器配置失败: %w", err)
@@ -241,6 +243,49 @@ func readRuntimeSpec(bundleDir string) (*specs.Spec, error) {
 		spec.Process.Cwd = "/"
 	}
 	return &spec, nil
+}
+
+func ensureRootlessRuntimeSpec(spec *specs.Spec) error {
+	if spec == nil {
+		return fmt.Errorf("OCI spec 不能为空")
+	}
+	if spec.Process == nil {
+		return fmt.Errorf("OCI spec 缺少 process 配置")
+	}
+	if spec.Linux == nil {
+		spec.Linux = &specs.Linux{}
+	}
+
+	if !hasLinuxNamespace(spec.Linux.Namespaces, specs.UserNamespace) {
+		spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{Type: specs.UserNamespace})
+	}
+
+	processUID := spec.Process.User.UID
+	processGID := spec.Process.User.GID
+	spec.Linux.UIDMappings = []specs.LinuxIDMapping{
+		{
+			ContainerID: processUID,
+			HostID:      uint32(os.Geteuid()),
+			Size:        1,
+		},
+	}
+	spec.Linux.GIDMappings = []specs.LinuxIDMapping{
+		{
+			ContainerID: processGID,
+			HostID:      uint32(os.Getegid()),
+			Size:        1,
+		},
+	}
+	return nil
+}
+
+func hasLinuxNamespace(namespaces []specs.LinuxNamespace, namespaceType specs.LinuxNamespaceType) bool {
+	for _, ns := range namespaces {
+		if ns.Type == namespaceType {
+			return true
+		}
+	}
+	return false
 }
 
 func toLibcontainerProcess(processSpec *specs.Process, output *bytes.Buffer) (*libcontainer.Process, error) {
