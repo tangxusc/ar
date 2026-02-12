@@ -39,6 +39,11 @@ type NodeList struct {
 	Nodes []*Node `json:"nodes"`
 }
 
+type Pipeline struct {
+	Name string `json:"name"`
+	Dag  string `json:"dag"`
+}
+
 type Query struct {
 }
 

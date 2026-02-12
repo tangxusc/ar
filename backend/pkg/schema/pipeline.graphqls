@@ -1,0 +1,9 @@
+type Pipeline {
+  name: String!
+  dag: String!
+}
+
+extend type Query {
+  pipelines: [Pipeline!]!
+  pipeline(name: String!): Pipeline
+}

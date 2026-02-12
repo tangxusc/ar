@@ -69,9 +69,16 @@ type ComplexityRoot struct {
 		Nodes func(childComplexity int) int
 	}
 
+	Pipeline struct {
+		Dag  func(childComplexity int) int
+		Name func(childComplexity int) int
+	}
+
 	Query struct {
 		Node       func(childComplexity int, ip string) int
 		Nodes      func(childComplexity int) int
+		Pipeline   func(childComplexity int, name string) int
+		Pipelines  func(childComplexity int) int
 		ServerInfo func(childComplexity int) int
 	}
 
@@ -93,6 +100,8 @@ type QueryResolver interface {
 	ServerInfo(ctx context.Context) (*model.ServerInfo, error)
 	Nodes(ctx context.Context) ([]*model.Node, error)
 	Node(ctx context.Context, ip string) (*model.Node, error)
+	Pipelines(ctx context.Context) ([]*model.Pipeline, error)
+	Pipeline(ctx context.Context, name string) (*model.Pipeline, error)
 }
 
 type executableSchema struct {
@@ -199,6 +208,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.NodeList.Nodes(childComplexity), true
 
+	case "Pipeline.dag":
+		if e.complexity.Pipeline.Dag == nil {
+			break
+		}
+
+		return e.complexity.Pipeline.Dag(childComplexity), true
+	case "Pipeline.name":
+		if e.complexity.Pipeline.Name == nil {
+			break
+		}
+
+		return e.complexity.Pipeline.Name(childComplexity), true
+
 	case "Query.node":
 		if e.complexity.Query.Node == nil {
 			break
@@ -216,6 +238,23 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Nodes(childComplexity), true
+	case "Query.pipeline":
+		if e.complexity.Query.Pipeline == nil {
+			break
+		}
+
+		args, err := ec.field_Query_pipeline_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Pipeline(childComplexity, args["name"].(string)), true
+	case "Query.pipelines":
+		if e.complexity.Query.Pipelines == nil {
+			break
+		}
+
+		return e.complexity.Query.Pipelines(childComplexity), true
 	case "Query.serverInfo":
 		if e.complexity.Query.ServerInfo == nil {
 			break
@@ -416,6 +455,15 @@ extend type Query {
   node(ip: String!): Node
 }
 `, BuiltIn: false},
+	{Name: "../schema/pipeline.graphqls", Input: `type Pipeline {
+  name: String!
+  dag: String!
+}
+
+extend type Query {
+  pipelines: [Pipeline!]!
+  pipeline(name: String!): Pipeline
+}`, BuiltIn: false},
 	{Name: "../schema/version.graphqls", Input: `type ServerInfo {
   version: String!
   commit: String!
@@ -487,6 +535,17 @@ func (ec *executionContext) field_Query_node_args(ctx context.Context, rawArgs m
 		return nil, err
 	}
 	args["ip"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_pipeline_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "name", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["name"] = arg0
 	return args, nil
 }
 
@@ -927,6 +986,64 @@ func (ec *executionContext) fieldContext_NodeList_nodes(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _Pipeline_name(ctx context.Context, field graphql.CollectedField, obj *model.Pipeline) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Pipeline_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Pipeline_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pipeline",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Pipeline_dag(ctx context.Context, field graphql.CollectedField, obj *model.Pipeline) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Pipeline_dag,
+		func(ctx context.Context) (any, error) {
+			return obj.Dag, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Pipeline_dag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pipeline",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_serverInfo(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1056,6 +1173,88 @@ func (ec *executionContext) fieldContext_Query_node(ctx context.Context, field g
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_node_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_pipelines(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_pipelines,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().Pipelines(ctx)
+		},
+		nil,
+		ec.marshalNPipeline2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_pipelines(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Pipeline_name(ctx, field)
+			case "dag":
+				return ec.fieldContext_Pipeline_dag(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Pipeline", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_pipeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_pipeline,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().Pipeline(ctx, fc.Args["name"].(string))
+		},
+		nil,
+		ec.marshalOPipeline2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipeline,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_pipeline(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_Pipeline_name(ctx, field)
+			case "dag":
+				return ec.fieldContext_Pipeline_dag(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Pipeline", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_pipeline_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3142,6 +3341,50 @@ func (ec *executionContext) _NodeList(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var pipelineImplementors = []string{"Pipeline"}
+
+func (ec *executionContext) _Pipeline(ctx context.Context, sel ast.SelectionSet, obj *model.Pipeline) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, pipelineImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Pipeline")
+		case "name":
+			out.Values[i] = ec._Pipeline_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dag":
+			out.Values[i] = ec._Pipeline_dag(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -3215,6 +3458,47 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_node(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "pipelines":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_pipelines(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "pipeline":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_pipeline(ctx, field)
 				return res
 			}
 
@@ -3817,6 +4101,60 @@ func (ec *executionContext) marshalNNodeList2ᚖgithubᚗcomᚋtangxuscᚋarᚋb
 	return ec._NodeList(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNPipeline2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Pipeline) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPipeline2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipeline(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPipeline2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipeline(ctx context.Context, sel ast.SelectionSet, v *model.Pipeline) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Pipeline(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNServerInfo2githubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐServerInfo(ctx context.Context, sel ast.SelectionSet, v model.ServerInfo) graphql.Marshaler {
 	return ec._ServerInfo(ctx, sel, &v)
 }
@@ -4140,6 +4478,13 @@ func (ec *executionContext) marshalONode2ᚖgithubᚗcomᚋtangxuscᚋarᚋbacke
 		return graphql.Null
 	}
 	return ec._Node(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOPipeline2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipeline(ctx context.Context, sel ast.SelectionSet, v *model.Pipeline) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Pipeline(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {
