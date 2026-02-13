@@ -114,9 +114,9 @@ type MutationResolver interface {
 	DeleteNode(ctx context.Context, input model.DeleteNodeInput) (*model.NodeList, error)
 	ImageDelete(ctx context.Context, name string) (bool, error)
 	ImagePrune(ctx context.Context, all *bool) ([]string, error)
-	ResumePipeline(ctx context.Context, taskID string) (*model.PipelineRunTask, error)
 	RunPipeline(ctx context.Context, input model.RunPipelineInput) (*model.PipelineRunTask, error)
 	StopPipeline(ctx context.Context, taskID string) (*model.PipelineRunTask, error)
+	ResumePipeline(ctx context.Context, taskID string) (*model.PipelineRunTask, error)
 }
 type QueryResolver interface {
 	ServerInfo(ctx context.Context) (*model.ServerInfo, error)
@@ -1185,23 +1185,6 @@ func (ec *executionContext) fieldContext_Mutation_imagePrune(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_resumePipeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_resumePipeline,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().ResumePipeline(ctx, fc.Args["taskId"].(string))
-		},
-		nil,
-		ec.marshalNPipelineRunTask2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask,
-		true,
-		true,
-	)
-}
-
 func (ec *executionContext) _Mutation_runPipeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1211,23 +1194,6 @@ func (ec *executionContext) _Mutation_runPipeline(ctx context.Context, field gra
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
 			return ec.resolvers.Mutation().RunPipeline(ctx, fc.Args["input"].(model.RunPipelineInput))
-		},
-		nil,
-		ec.marshalNPipelineRunTask2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) _Mutation_stopPipeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_stopPipeline,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().StopPipeline(ctx, fc.Args["taskId"].(string))
 		},
 		nil,
 		ec.marshalNPipelineRunTask2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask,
@@ -1266,34 +1232,21 @@ func (ec *executionContext) fieldContext_Mutation_runPipeline(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) fieldContext_Mutation_resumePipeline(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "taskId":
-				return ec.fieldContext_PipelineRunTask_taskId(ctx, field)
-			case "data":
-				return ec.fieldContext_PipelineRunTask_data(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PipelineRunTask", field.Name)
+func (ec *executionContext) _Mutation_stopPipeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_stopPipeline,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().StopPipeline(ctx, fc.Args["taskId"].(string))
 		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_resumePipeline_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
+		nil,
+		ec.marshalNPipelineRunTask2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask,
+		true,
+		true,
+	)
 }
 
 func (ec *executionContext) fieldContext_Mutation_stopPipeline(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1320,6 +1273,53 @@ func (ec *executionContext) fieldContext_Mutation_stopPipeline(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_stopPipeline_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_resumePipeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_resumePipeline,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ResumePipeline(ctx, fc.Args["taskId"].(string))
+		},
+		nil,
+		ec.marshalNPipelineRunTask2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_resumePipeline(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "taskId":
+				return ec.fieldContext_PipelineRunTask_taskId(ctx, field)
+			case "data":
+				return ec.fieldContext_PipelineRunTask_data(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PipelineRunTask", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_resumePipeline_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4002,13 +4002,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "resumePipeline":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_resumePipeline(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "runPipeline":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_runPipeline(ctx, field)
@@ -4019,6 +4012,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "stopPipeline":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_stopPipeline(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resumePipeline":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_resumePipeline(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
