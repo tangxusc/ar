@@ -220,3 +220,26 @@ func ReadPipelineJSON(runDir string) (*PipelineRunData, error) {
 	}
 	return &runData, nil
 }
+
+// FindRunDirByTaskID 根据 taskID 在 arRoot 下扫描各流水线目录，找到包含 pipeline.json 的任务目录。
+// 用于停止/恢复时仅知 taskId 的场景。返回 runDir 与 nil，未找到则返回错误。
+func FindRunDirByTaskID(arRoot, taskID string) (string, error) {
+	if taskID == "" {
+		return "", fmt.Errorf("taskId 不能为空")
+	}
+	entries, err := os.ReadDir(arRoot)
+	if err != nil {
+		return "", fmt.Errorf("读取 ar 根目录失败 %s: %w", arRoot, err)
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		runDir := filepath.Join(arRoot, e.Name(), taskID)
+		path := filepath.Join(runDir, "pipeline.json")
+		if _, err := os.Stat(path); err == nil {
+			return runDir, nil
+		}
+	}
+	return "", fmt.Errorf("未找到 taskId 对应的流水线任务目录: %s", taskID)
+}

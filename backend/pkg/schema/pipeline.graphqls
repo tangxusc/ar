@@ -30,4 +30,6 @@ extend type Query {
 
 extend type Mutation {
   runPipeline(input: RunPipelineInput!): PipelineRunTask!
+  stopPipeline(taskId: String!): PipelineRunTask!
+  resumePipeline(taskId: String!): PipelineRunTask!
 }

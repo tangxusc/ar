@@ -9,22 +9,81 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"sync"
 
 	"github.com/tangxusc/ar/backend/pkg/config"
 	"github.com/tangxusc/ar/backend/pkg/graph/model"
 	"github.com/tangxusc/ar/backend/pkg/pipeline"
 )
 
+// runCancelRegistry 登记正在运行的流水线 taskID -> context.CancelFunc，供 StopPipeline 取消执行。
+var runCancelRegistry sync.Map
+
 // RunPipeline is the resolver for the runPipeline field.
 func (r *mutationResolver) RunPipeline(ctx context.Context, input model.RunPipelineInput) (*model.PipelineRunTask, error) {
 	nodes := runPipelineNodesFromInput(input.Nodes)
 	arRoot := filepath.Dir(config.PipelinesDir)
 	runner := pipeline.NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
-	taskID, err := runner.Run(ctx, input.PipelineName, nodes)
+	taskID := pipeline.GenerateTaskID()
+	runCtx, cancel := context.WithCancel(ctx)
+	runCancelRegistry.Store(taskID, cancel)
+	defer runCancelRegistry.Delete(taskID)
+
+	taskID, err := runner.Run(runCtx, input.PipelineName, nodes, taskID)
 	if err != nil {
 		return nil, err
 	}
 	runDir := pipeline.RunDirFor(arRoot, input.PipelineName, taskID)
+	runData, err := pipeline.ReadPipelineJSON(runDir)
+	if err != nil {
+		return &model.PipelineRunTask{TaskID: taskID, Data: "{}"}, nil
+	}
+	dataBytes, _ := json.Marshal(runData)
+	return &model.PipelineRunTask{TaskID: taskID, Data: string(dataBytes)}, nil
+}
+
+// StopPipeline is the resolver for the stopPipeline field.
+func (r *mutationResolver) StopPipeline(ctx context.Context, taskID string) (*model.PipelineRunTask, error) {
+	arRoot := filepath.Dir(config.PipelinesDir)
+	if v, ok := runCancelRegistry.Load(taskID); ok {
+		if cancel, ok := v.(context.CancelFunc); ok {
+			cancel()
+		}
+	}
+	runDir, err := pipeline.FindRunDirByTaskID(arRoot, taskID)
+	if err != nil {
+		return &model.PipelineRunTask{TaskID: taskID, Data: "{}"}, nil
+	}
+	runData, err := pipeline.ReadPipelineJSON(runDir)
+	if err != nil {
+		return &model.PipelineRunTask{TaskID: taskID, Data: "{}"}, nil
+	}
+	for i := range runData.Steps {
+		s := &runData.Steps[i]
+		if s.Status == pipeline.StatusRunning || s.Status == pipeline.StatusPending {
+			s.Status = pipeline.StatusCancelled
+		}
+	}
+	_ = pipeline.WritePipelineJSON(runDir, runData)
+	dataBytes, _ := json.Marshal(runData)
+	return &model.PipelineRunTask{TaskID: taskID, Data: string(dataBytes)}, nil
+}
+
+// ResumePipeline is the resolver for the resumePipeline field.
+func (r *mutationResolver) ResumePipeline(ctx context.Context, taskID string) (*model.PipelineRunTask, error) {
+	arRoot := filepath.Dir(config.PipelinesDir)
+	runner := pipeline.NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
+	runCtx, cancel := context.WithCancel(ctx)
+	runCancelRegistry.Store(taskID, cancel)
+	defer runCancelRegistry.Delete(taskID)
+
+	if err := runner.Resume(runCtx, taskID); err != nil {
+		return nil, err
+	}
+	runDir, err := pipeline.FindRunDirByTaskID(arRoot, taskID)
+	if err != nil {
+		return &model.PipelineRunTask{TaskID: taskID, Data: "{}"}, nil
+	}
 	runData, err := pipeline.ReadPipelineJSON(runDir)
 	if err != nil {
 		return &model.PipelineRunTask{TaskID: taskID, Data: "{}"}, nil

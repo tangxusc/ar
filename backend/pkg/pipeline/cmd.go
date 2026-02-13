@@ -59,7 +59,7 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 			}
 			arRoot := filepath.Dir(config.PipelinesDir)
 			runner := NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
-			taskID, err := runner.Run(ctx, runPipelineName, nodes)
+			taskID, err := runner.Run(ctx, runPipelineName, nodes, "")
 			if err != nil {
 				return err
 			}

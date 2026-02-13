@@ -19,3 +19,19 @@ mutation RunPipeline($input: RunPipelineInput!) {
     data
   }
 }
+
+# 停止流水线（与 design/停止流水线流程.md 一致）
+mutation StopPipeline($taskId: String!) {
+  stopPipeline(taskId: $taskId) {
+    taskId
+    data
+  }
+}
+
+# 恢复流水线（与 design/恢复流水线执行.md 一致）
+mutation ResumePipeline($taskId: String!) {
+  resumePipeline(taskId: $taskId) {
+    taskId
+    data
+  }
+}
