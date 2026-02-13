@@ -11,3 +11,11 @@ query {
     dag
   }
 }
+
+# 执行流水线（与 design/执行流水线流程.md 一致）
+mutation RunPipeline($input: RunPipelineInput!) {
+  runPipeline(input: $input) {
+    taskId
+    data
+  }
+}

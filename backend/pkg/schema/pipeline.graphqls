@@ -3,7 +3,31 @@ type Pipeline {
   dag: String!
 }
 
+# 执行流水线入参：流水线名称 + 节点列表（与 design/执行流水线流程.md 一致）
+input RunPipelineNodeInput {
+  ip: String!
+  port: String
+  username: String!
+  password: String!
+  labels: [LabelInput!]!
+}
+
+input RunPipelineInput {
+  pipelineName: String!
+  nodes: [RunPipelineNodeInput!]!
+}
+
+# 执行流水线返回：任务 ID + 当前 DAG 状态（pipeline.json 内容）
+type PipelineRunTask {
+  taskId: String!
+  data: String!
+}
+
 extend type Query {
   pipelines: [Pipeline!]!
   pipeline(name: String!): Pipeline
+}
+
+extend type Mutation {
+  runPipeline(input: RunPipelineInput!): PipelineRunTask!
 }

@@ -62,6 +62,7 @@ type ComplexityRoot struct {
 		DeleteNode  func(childComplexity int, input model.DeleteNodeInput) int
 		ImageDelete func(childComplexity int, name string) int
 		ImagePrune  func(childComplexity int, all *bool) int
+		RunPipeline func(childComplexity int, input model.RunPipelineInput) int
 		UpdateNode  func(childComplexity int, input model.UpdateNodeInput) int
 	}
 
@@ -80,6 +81,11 @@ type ComplexityRoot struct {
 	Pipeline struct {
 		Dag  func(childComplexity int) int
 		Name func(childComplexity int) int
+	}
+
+	PipelineRunTask struct {
+		Data   func(childComplexity int) int
+		TaskID func(childComplexity int) int
 	}
 
 	Query struct {
@@ -106,6 +112,7 @@ type MutationResolver interface {
 	DeleteNode(ctx context.Context, input model.DeleteNodeInput) (*model.NodeList, error)
 	ImageDelete(ctx context.Context, name string) (bool, error)
 	ImagePrune(ctx context.Context, all *bool) ([]string, error)
+	RunPipeline(ctx context.Context, input model.RunPipelineInput) (*model.PipelineRunTask, error)
 }
 type QueryResolver interface {
 	ServerInfo(ctx context.Context) (*model.ServerInfo, error)
@@ -211,6 +218,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.ImagePrune(childComplexity, args["all"].(*bool)), true
+	case "Mutation.runPipeline":
+		if e.complexity.Mutation.RunPipeline == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_runPipeline_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RunPipeline(childComplexity, args["input"].(model.RunPipelineInput)), true
 	case "Mutation.updateNode":
 		if e.complexity.Mutation.UpdateNode == nil {
 			break
@@ -273,6 +291,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Pipeline.Name(childComplexity), true
+
+	case "PipelineRunTask.data":
+		if e.complexity.PipelineRunTask.Data == nil {
+			break
+		}
+
+		return e.complexity.PipelineRunTask.Data(childComplexity), true
+	case "PipelineRunTask.taskId":
+		if e.complexity.PipelineRunTask.TaskID == nil {
+			break
+		}
+
+		return e.complexity.PipelineRunTask.TaskID(childComplexity), true
 
 	case "Query.images":
 		if e.complexity.Query.Images == nil {
@@ -363,6 +394,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAddNodeInput,
 		ec.unmarshalInputDeleteNodeInput,
 		ec.unmarshalInputLabelInput,
+		ec.unmarshalInputRunPipelineInput,
+		ec.unmarshalInputRunPipelineNodeInput,
 		ec.unmarshalInputUpdateNodeInput,
 	)
 	first := true
@@ -542,9 +575,33 @@ extend type Query {
   dag: String!
 }
 
+# 执行流水线入参：流水线名称 + 节点列表（与 design/执行流水线流程.md 一致）
+input RunPipelineNodeInput {
+  ip: String!
+  port: String
+  username: String!
+  password: String!
+  labels: [LabelInput!]!
+}
+
+input RunPipelineInput {
+  pipelineName: String!
+  nodes: [RunPipelineNodeInput!]!
+}
+
+# 执行流水线返回：任务 ID + 当前 DAG 状态（pipeline.json 内容）
+type PipelineRunTask {
+  taskId: String!
+  data: String!
+}
+
 extend type Query {
   pipelines: [Pipeline!]!
   pipeline(name: String!): Pipeline
+}
+
+extend type Mutation {
+  runPipeline(input: RunPipelineInput!): PipelineRunTask!
 }`, BuiltIn: false},
 	{Name: "../schema/version.graphqls", Input: `type ServerInfo {
   version: String!
@@ -606,6 +663,17 @@ func (ec *executionContext) field_Mutation_imagePrune_args(ctx context.Context, 
 		return nil, err
 	}
 	args["all"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_runPipeline_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNRunPipelineInput2githubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐRunPipelineInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -1067,6 +1135,53 @@ func (ec *executionContext) fieldContext_Mutation_imagePrune(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_runPipeline(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_runPipeline,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RunPipeline(ctx, fc.Args["input"].(model.RunPipelineInput))
+		},
+		nil,
+		ec.marshalNPipelineRunTask2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_runPipeline(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "taskId":
+				return ec.fieldContext_PipelineRunTask_taskId(ctx, field)
+			case "data":
+				return ec.fieldContext_PipelineRunTask_data(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PipelineRunTask", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_runPipeline_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Node_ip(ctx context.Context, field graphql.CollectedField, obj *model.Node) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1307,6 +1422,64 @@ func (ec *executionContext) _Pipeline_dag(ctx context.Context, field graphql.Col
 func (ec *executionContext) fieldContext_Pipeline_dag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Pipeline",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PipelineRunTask_taskId(ctx context.Context, field graphql.CollectedField, obj *model.PipelineRunTask) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PipelineRunTask_taskId,
+		func(ctx context.Context) (any, error) {
+			return obj.TaskID, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PipelineRunTask_taskId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PipelineRunTask",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PipelineRunTask_data(ctx context.Context, field graphql.CollectedField, obj *model.PipelineRunTask) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PipelineRunTask_data,
+		func(ctx context.Context) (any, error) {
+			return obj.Data, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PipelineRunTask_data(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PipelineRunTask",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -3386,6 +3559,95 @@ func (ec *executionContext) unmarshalInputLabelInput(ctx context.Context, obj an
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputRunPipelineInput(ctx context.Context, obj any) (model.RunPipelineInput, error) {
+	var it model.RunPipelineInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"pipelineName", "nodes"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "pipelineName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pipelineName"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PipelineName = data
+		case "nodes":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nodes"))
+			data, err := ec.unmarshalNRunPipelineNodeInput2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐRunPipelineNodeInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Nodes = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputRunPipelineNodeInput(ctx context.Context, obj any) (model.RunPipelineNodeInput, error) {
+	var it model.RunPipelineNodeInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"ip", "port", "username", "password", "labels"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ip":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ip"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IP = data
+		case "port":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("port"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Port = data
+		case "username":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Username = data
+		case "password":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Password = data
+		case "labels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("labels"))
+			data, err := ec.unmarshalNLabelInput2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐLabelInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Labels = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateNodeInput(ctx context.Context, obj any) (model.UpdateNodeInput, error) {
 	var it model.UpdateNodeInput
 	asMap := map[string]any{}
@@ -3596,6 +3858,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "runPipeline":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_runPipeline(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3732,6 +4001,50 @@ func (ec *executionContext) _Pipeline(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "dag":
 			out.Values[i] = ec._Pipeline_dag(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var pipelineRunTaskImplementors = []string{"PipelineRunTask"}
+
+func (ec *executionContext) _PipelineRunTask(ctx context.Context, sel ast.SelectionSet, obj *model.PipelineRunTask) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, pipelineRunTaskImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PipelineRunTask")
+		case "taskId":
+			out.Values[i] = ec._PipelineRunTask_taskId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "data":
+			out.Values[i] = ec._PipelineRunTask_data(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -4602,6 +4915,45 @@ func (ec *executionContext) marshalNPipeline2ᚖgithubᚗcomᚋtangxuscᚋarᚋb
 		return graphql.Null
 	}
 	return ec._Pipeline(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPipelineRunTask2githubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask(ctx context.Context, sel ast.SelectionSet, v model.PipelineRunTask) graphql.Marshaler {
+	return ec._PipelineRunTask(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPipelineRunTask2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐPipelineRunTask(ctx context.Context, sel ast.SelectionSet, v *model.PipelineRunTask) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PipelineRunTask(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNRunPipelineInput2githubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐRunPipelineInput(ctx context.Context, v any) (model.RunPipelineInput, error) {
+	res, err := ec.unmarshalInputRunPipelineInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNRunPipelineNodeInput2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐRunPipelineNodeInputᚄ(ctx context.Context, v any) ([]*model.RunPipelineNodeInput, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*model.RunPipelineNodeInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNRunPipelineNodeInput2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐRunPipelineNodeInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNRunPipelineNodeInput2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐRunPipelineNodeInput(ctx context.Context, v any) (*model.RunPipelineNodeInput, error) {
+	res, err := ec.unmarshalInputRunPipelineNodeInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNServerInfo2githubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐServerInfo(ctx context.Context, sel ast.SelectionSet, v model.ServerInfo) graphql.Marshaler {

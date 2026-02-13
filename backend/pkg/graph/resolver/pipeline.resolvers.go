@@ -7,9 +7,61 @@ package resolver
 
 import (
 	"context"
+	"encoding/json"
+	"path/filepath"
 
+	"github.com/tangxusc/ar/backend/pkg/config"
 	"github.com/tangxusc/ar/backend/pkg/graph/model"
+	"github.com/tangxusc/ar/backend/pkg/pipeline"
 )
+
+// RunPipeline is the resolver for the runPipeline field.
+func (r *mutationResolver) RunPipeline(ctx context.Context, input model.RunPipelineInput) (*model.PipelineRunTask, error) {
+	nodes := runPipelineNodesFromInput(input.Nodes)
+	arRoot := filepath.Dir(config.PipelinesDir)
+	runner := pipeline.NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
+	taskID, err := runner.Run(ctx, input.PipelineName, nodes)
+	if err != nil {
+		return nil, err
+	}
+	runDir := pipeline.RunDirFor(arRoot, input.PipelineName, taskID)
+	runData, err := pipeline.ReadPipelineJSON(runDir)
+	if err != nil {
+		return &model.PipelineRunTask{TaskID: taskID, Data: "{}"}, nil
+	}
+	dataBytes, _ := json.Marshal(runData)
+	return &model.PipelineRunTask{TaskID: taskID, Data: string(dataBytes)}, nil
+}
+
+func runPipelineNodesFromInput(nodes []*model.RunPipelineNodeInput) []pipeline.RunNode {
+	if len(nodes) == 0 {
+		return nil
+	}
+	out := make([]pipeline.RunNode, 0, len(nodes))
+	for _, n := range nodes {
+		if n == nil {
+			continue
+		}
+		port := ""
+		if n.Port != nil {
+			port = *n.Port
+		}
+		labels := make([]pipeline.Label, 0, len(n.Labels))
+		for _, l := range n.Labels {
+			if l != nil {
+				labels = append(labels, pipeline.Label{Key: l.Key, Value: l.Value})
+			}
+		}
+		out = append(out, pipeline.RunNode{
+			IP:       n.IP,
+			Port:     port,
+			Username: n.Username,
+			Password: n.Password,
+			Labels:   labels,
+		})
+	}
+	return out
+}
 
 // Pipelines is the resolver for the pipelines field.
 func (r *queryResolver) Pipelines(ctx context.Context) ([]*model.Pipeline, error) {

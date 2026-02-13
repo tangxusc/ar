@@ -53,7 +53,25 @@ type Pipeline struct {
 	Dag  string `json:"dag"`
 }
 
+type PipelineRunTask struct {
+	TaskID string `json:"taskId"`
+	Data   string `json:"data"`
+}
+
 type Query struct {
+}
+
+type RunPipelineInput struct {
+	PipelineName string                  `json:"pipelineName"`
+	Nodes        []*RunPipelineNodeInput `json:"nodes"`
+}
+
+type RunPipelineNodeInput struct {
+	IP       string        `json:"ip"`
+	Port     *string       `json:"port,omitempty"`
+	Username string        `json:"username"`
+	Password string        `json:"password"`
+	Labels   []*LabelInput `json:"labels"`
 }
 
 type ServerInfo struct {
