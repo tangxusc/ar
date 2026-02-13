@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 )
 
@@ -51,6 +52,44 @@ func ListImages(storeDir string) ([]ImageEntry, error) {
 		list = append(list, ImageEntry{Name: name, Ref: ref, Path: path})
 	}
 	return list, nil
+}
+
+// OpenImageFromStore 根据镜像名或引用从 storeDir 中打开 v1.Image，供 run 使用。
+func OpenImageFromStore(storeDir, imageNameOrRef string) (v1.Image, error) {
+	list, err := ListImages(storeDir)
+	if err != nil {
+		return nil, err
+	}
+	safe := sanitizeImageName(imageNameOrRef)
+	var layoutPath string
+	for _, e := range list {
+		if e.Name == imageNameOrRef || e.Ref == imageNameOrRef || (safe != "" && e.Name == safe) {
+			layoutPath = e.Path
+			break
+		}
+	}
+	if layoutPath == "" {
+		return nil, fmt.Errorf("镜像未找到: %s（请先 ar load 导入）", imageNameOrRef)
+	}
+	ociPath, err := layout.FromPath(layoutPath)
+	if err != nil {
+		return nil, fmt.Errorf("打开 OCI layout 失败 %s: %w", layoutPath, err)
+	}
+	index, err := ociPath.ImageIndex()
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := index.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, desc := range manifest.Manifests {
+		img, err := index.Image(desc.Digest)
+		if err == nil {
+			return img, nil
+		}
+	}
+	return nil, fmt.Errorf("镜像 index 中无可用镜像: %s", layoutPath)
 }
 
 // readImageRefFromLayout 从 OCI layout 目录读取 org.opencontainers.image.ref.name 注解。

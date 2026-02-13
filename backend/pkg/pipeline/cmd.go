@@ -3,6 +3,8 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -33,6 +35,44 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	_ = loadCmd.MarkFlagRequired("input")
 
 	rootCommand.AddCommand(loadCmd)
+
+	// ar run：按 design/执行流水线流程.md 使用 OCI 规范执行流水线（不依赖 podman）
+	var runPipelineName, runNodesPath string
+	runCmd := &cobra.Command{
+		Use:   "run",
+		Short: "执行流水线（按 DAG 顺序运行 OCI 容器）",
+		Long:  "读取 pipeline_name.template.json，根据节点列表渲染并按拓扑序执行各步骤；使用 OCI Runtime（libcontainer）运行容器，挂载 /tasks 与 /current-task。",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if runPipelineName == "" {
+				return fmt.Errorf("请通过 -p 指定流水线名称（与 .template.json 前缀一致）")
+			}
+			if runNodesPath == "" {
+				return fmt.Errorf("请通过 -n 指定节点列表 JSON 文件路径")
+			}
+			data, err := os.ReadFile(runNodesPath)
+			if err != nil {
+				return fmt.Errorf("读取节点文件失败 %s: %w", runNodesPath, err)
+			}
+			nodes, err := ParseNodesFile(data)
+			if err != nil {
+				return fmt.Errorf("解析节点 JSON 失败: %w", err)
+			}
+			arRoot := filepath.Dir(config.PipelinesDir)
+			runner := NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
+			taskID, err := runner.Run(ctx, runPipelineName, nodes)
+			if err != nil {
+				return err
+			}
+			fmt.Println("taskId:", taskID)
+			return nil
+		},
+	}
+	runCmd.Flags().StringVarP(&runPipelineName, "pipeline", "p", "", "流水线名称（对应 pipelines-dir 下的 <name>.template.json）")
+	runCmd.Flags().StringVarP(&runNodesPath, "nodes", "n", "", "节点列表 JSON 文件路径（格式见 design/节点管理.md）")
+	_ = runCmd.MarkFlagRequired("pipeline")
+	_ = runCmd.MarkFlagRequired("nodes")
+	rootCommand.AddCommand(runCmd)
+
 	addImageCommand(rootCommand)
 }
 
