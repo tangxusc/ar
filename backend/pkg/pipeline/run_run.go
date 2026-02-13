@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -134,9 +133,4 @@ func RunStep(ctx context.Context, runtimeRoot, imagesStoreDir, runDir, nodeDir, 
 		return RunStepResult{ExitCode: 1, Err: err}
 	}
 	return RunStepResult{ExitCode: 0}
-}
-
-// GenerateTaskID 生成唯一任务 ID：时间戳_随机数（设计文档约定）。
-func GenerateTaskID() string {
-	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().UnixNano()%10000)
 }

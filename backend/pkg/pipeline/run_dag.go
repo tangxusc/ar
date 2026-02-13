@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -242,4 +243,9 @@ func FindRunDirByTaskID(arRoot, taskID string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("未找到 taskId 对应的流水线任务目录: %s", taskID)
+}
+
+// GenerateTaskID 生成唯一任务 ID：时间戳_随机数（设计文档约定）。放在本文件以便所有平台可编译。
+func GenerateTaskID() string {
+	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().UnixNano()%10000)
 }
