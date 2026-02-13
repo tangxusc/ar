@@ -46,15 +46,23 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	ImageEntry struct {
+		Name func(childComplexity int) int
+		Path func(childComplexity int) int
+		Ref  func(childComplexity int) int
+	}
+
 	Label struct {
 		Key   func(childComplexity int) int
 		Value func(childComplexity int) int
 	}
 
 	Mutation struct {
-		AddNode    func(childComplexity int, input model.AddNodeInput) int
-		DeleteNode func(childComplexity int, input model.DeleteNodeInput) int
-		UpdateNode func(childComplexity int, input model.UpdateNodeInput) int
+		AddNode     func(childComplexity int, input model.AddNodeInput) int
+		DeleteNode  func(childComplexity int, input model.DeleteNodeInput) int
+		ImageDelete func(childComplexity int, name string) int
+		ImagePrune  func(childComplexity int, all *bool) int
+		UpdateNode  func(childComplexity int, input model.UpdateNodeInput) int
 	}
 
 	Node struct {
@@ -75,6 +83,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		Images     func(childComplexity int) int
 		Node       func(childComplexity int, ip string) int
 		Nodes      func(childComplexity int) int
 		Pipeline   func(childComplexity int, name string) int
@@ -95,9 +104,12 @@ type MutationResolver interface {
 	AddNode(ctx context.Context, input model.AddNodeInput) (*model.NodeList, error)
 	UpdateNode(ctx context.Context, input model.UpdateNodeInput) (*model.NodeList, error)
 	DeleteNode(ctx context.Context, input model.DeleteNodeInput) (*model.NodeList, error)
+	ImageDelete(ctx context.Context, name string) (bool, error)
+	ImagePrune(ctx context.Context, all *bool) ([]string, error)
 }
 type QueryResolver interface {
 	ServerInfo(ctx context.Context) (*model.ServerInfo, error)
+	Images(ctx context.Context) ([]*model.ImageEntry, error)
 	Nodes(ctx context.Context) ([]*model.Node, error)
 	Node(ctx context.Context, ip string) (*model.Node, error)
 	Pipelines(ctx context.Context) ([]*model.Pipeline, error)
@@ -122,6 +134,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "ImageEntry.name":
+		if e.complexity.ImageEntry.Name == nil {
+			break
+		}
+
+		return e.complexity.ImageEntry.Name(childComplexity), true
+	case "ImageEntry.path":
+		if e.complexity.ImageEntry.Path == nil {
+			break
+		}
+
+		return e.complexity.ImageEntry.Path(childComplexity), true
+	case "ImageEntry.ref":
+		if e.complexity.ImageEntry.Ref == nil {
+			break
+		}
+
+		return e.complexity.ImageEntry.Ref(childComplexity), true
 
 	case "Label.key":
 		if e.complexity.Label.Key == nil {
@@ -158,6 +189,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.DeleteNode(childComplexity, args["input"].(model.DeleteNodeInput)), true
+	case "Mutation.imageDelete":
+		if e.complexity.Mutation.ImageDelete == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_imageDelete_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ImageDelete(childComplexity, args["name"].(string)), true
+	case "Mutation.imagePrune":
+		if e.complexity.Mutation.ImagePrune == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_imagePrune_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ImagePrune(childComplexity, args["all"].(*bool)), true
 	case "Mutation.updateNode":
 		if e.complexity.Mutation.UpdateNode == nil {
 			break
@@ -221,6 +274,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Pipeline.Name(childComplexity), true
 
+	case "Query.images":
+		if e.complexity.Query.Images == nil {
+			break
+		}
+
+		return e.complexity.Query.Images(childComplexity), true
 	case "Query.node":
 		if e.complexity.Query.Node == nil {
 			break
@@ -402,6 +461,29 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
+	{Name: "../schema/image.graphqls", Input: `# 镜像相关类型与接口，对应 ar image 子命令
+
+type ImageEntry {
+  """存储目录名（与 list 输出第一列一致，用于 rm 指定）"""
+  name: String!
+  """镜像引用名（来自 OCI annotation 或 name）"""
+  ref: String!
+  """镜像在本地存储的完整路径"""
+  path: String!
+}
+
+extend type Query {
+  """列出已导入的 OCI 镜像（对应 ar image list / ar image ls）"""
+  images: [ImageEntry!]!
+}
+
+extend type Mutation {
+  """删除指定名称的镜像（对应 ar image rm <name>）"""
+  imageDelete(name: String!): Boolean!
+  """清理未使用镜像；all 为 true 时删除全部（对应 ar image prune [--all]）"""
+  imagePrune(all: Boolean): [String!]!
+}
+`, BuiltIn: false},
 	{Name: "../schema/node.graphqls", Input: `type Label {
   key: String!
   value: String!
@@ -505,6 +587,28 @@ func (ec *executionContext) field_Mutation_deleteNode_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_imageDelete_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "name", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_imagePrune_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "all", ec.unmarshalOBoolean2ᚖbool)
+	if err != nil {
+		return nil, err
+	}
+	args["all"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_updateNode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -600,6 +704,93 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _ImageEntry_name(ctx context.Context, field graphql.CollectedField, obj *model.ImageEntry) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageEntry_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageEntry_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageEntry",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageEntry_ref(ctx context.Context, field graphql.CollectedField, obj *model.ImageEntry) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageEntry_ref,
+		func(ctx context.Context) (any, error) {
+			return obj.Ref, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageEntry_ref(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageEntry",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageEntry_path(ctx context.Context, field graphql.CollectedField, obj *model.ImageEntry) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageEntry_path,
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageEntry_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageEntry",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Label_key(ctx context.Context, field graphql.CollectedField, obj *model.Label) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
@@ -788,6 +979,88 @@ func (ec *executionContext) fieldContext_Mutation_deleteNode(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_deleteNode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_imageDelete(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_imageDelete,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ImageDelete(ctx, fc.Args["name"].(string))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_imageDelete(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_imageDelete_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_imagePrune(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_imagePrune,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ImagePrune(ctx, fc.Args["all"].(*bool))
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_imagePrune(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_imagePrune_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -1080,6 +1353,43 @@ func (ec *executionContext) fieldContext_Query_serverInfo(_ context.Context, fie
 				return ec.fieldContext_ServerInfo_currentDateTime(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ServerInfo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_images(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_images,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().Images(ctx)
+		},
+		nil,
+		ec.marshalNImageEntry2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐImageEntryᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_images(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_ImageEntry_name(ctx, field)
+			case "ref":
+				return ec.fieldContext_ImageEntry_ref(ctx, field)
+			case "path":
+				return ec.fieldContext_ImageEntry_path(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ImageEntry", field.Name)
 		},
 	}
 	return fc, nil
@@ -3139,6 +3449,55 @@ func (ec *executionContext) unmarshalInputUpdateNodeInput(ctx context.Context, o
 
 // region    **************************** object.gotpl ****************************
 
+var imageEntryImplementors = []string{"ImageEntry"}
+
+func (ec *executionContext) _ImageEntry(ctx context.Context, sel ast.SelectionSet, obj *model.ImageEntry) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, imageEntryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ImageEntry")
+		case "name":
+			out.Values[i] = ec._ImageEntry_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ref":
+			out.Values[i] = ec._ImageEntry_ref(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._ImageEntry_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var labelImplementors = []string{"Label"}
 
 func (ec *executionContext) _Label(ctx context.Context, sel ast.SelectionSet, obj *model.Label) graphql.Marshaler {
@@ -3219,6 +3578,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "deleteNode":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteNode(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imageDelete":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_imageDelete(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imagePrune":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_imagePrune(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -3414,6 +3787,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_serverInfo(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "images":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_images(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -3959,6 +4354,60 @@ func (ec *executionContext) unmarshalNDeleteNodeInput2githubᚗcomᚋtangxuscᚋ
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNImageEntry2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐImageEntryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ImageEntry) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNImageEntry2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐImageEntry(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNImageEntry2ᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐImageEntry(ctx context.Context, sel ast.SelectionSet, v *model.ImageEntry) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ImageEntry(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNLabel2ᚕᚖgithubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐLabelᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Label) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -4183,6 +4632,36 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNUpdateNodeInput2githubᚗcomᚋtangxuscᚋarᚋbackendᚋpkgᚋgraphᚋmodelᚐUpdateNodeInput(ctx context.Context, v any) (model.UpdateNodeInput, error) {

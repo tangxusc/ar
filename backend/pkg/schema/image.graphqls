@@ -1,0 +1,22 @@
+# 镜像相关类型与接口，对应 ar image 子命令
+
+type ImageEntry {
+  """存储目录名（与 list 输出第一列一致，用于 rm 指定）"""
+  name: String!
+  """镜像引用名（来自 OCI annotation 或 name）"""
+  ref: String!
+  """镜像在本地存储的完整路径"""
+  path: String!
+}
+
+extend type Query {
+  """列出已导入的 OCI 镜像（对应 ar image list / ar image ls）"""
+  images: [ImageEntry!]!
+}
+
+extend type Mutation {
+  """删除指定名称的镜像（对应 ar image rm <name>）"""
+  imageDelete(name: String!): Boolean!
+  """清理未使用镜像；all 为 true 时删除全部（对应 ar image prune [--all]）"""
+  imagePrune(all: Boolean): [String!]!
+}

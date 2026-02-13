@@ -1,0 +1,19 @@
+query {
+  images {
+    name
+    ref
+    path
+  }
+}
+
+mutation {
+  imageDelete(name: "some-image-name")
+}
+
+mutation {
+  imagePrune(all: false)
+}
+
+mutation {
+  imagePrune(all: true)
+}

@@ -14,6 +14,15 @@ type DeleteNodeInput struct {
 	IP string `json:"ip"`
 }
 
+type ImageEntry struct {
+	// 存储目录名（与 list 输出第一列一致，用于 rm 指定）
+	Name string `json:"name"`
+	// 镜像引用名（来自 OCI annotation 或 name）
+	Ref string `json:"ref"`
+	// 镜像在本地存储的完整路径
+	Path string `json:"path"`
+}
+
 type Label struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
