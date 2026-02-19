@@ -1,4 +1,4 @@
-FROM scratch
+FROM alpine:latest
 
 COPY entrypoint.sh /entrypoint.sh
 COPY alpine.template.json /alpine.template.json
