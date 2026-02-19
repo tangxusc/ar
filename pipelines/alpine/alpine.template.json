@@ -1,13 +1,15 @@
-{
-    "name": "alpine",
-    "image": "oci image",
-    "entrypoint": "entrypoint",
-    "args": [
-        "arg1",
-        "arg2"
-    ],
-    "env": [
-        "env1=value1",
-        "env2=value2"
-    ]
-}
+[
+    {
+        "name": "alpine",
+        "image": "alpine:latest",
+        "entrypoint": "cat",
+        "args": [
+            "/etc/os-release",
+            "/etc/hosts"
+        ],
+        "env": [
+            "env1=value1",
+            "env2=value2"
+        ]
+    }
+]

@@ -12,6 +12,12 @@ import (
 )
 
 func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
+	pipelineCmd := &cobra.Command{
+		Use:   "pipeline",
+		Short: "管理流水线（加载、执行、模板管理）",
+	}
+	rootCommand.AddCommand(pipelineCmd)
+
 	var inputArchive string
 	var loadNoCleanTmp bool
 
@@ -36,7 +42,7 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	loadCmd.Flags().BoolVar(&loadNoCleanTmp, "no-clean-tmp", false, "加载完成后保留临时目录（默认会清理 /tmp 下该流水线临时文件）")
 	_ = loadCmd.MarkFlagRequired("input")
 
-	rootCommand.AddCommand(loadCmd)
+	pipelineCmd.AddCommand(loadCmd)
 
 	// ar run：按 design/执行流水线流程.md 使用 OCI 规范执行流水线（不依赖 podman）
 	var runPipelineName, runNodesPath string
@@ -73,9 +79,11 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	runCmd.Flags().StringVarP(&runNodesPath, "nodes", "n", "", "节点列表 JSON 文件路径（格式见 design/节点管理.md）")
 	_ = runCmd.MarkFlagRequired("pipeline")
 	_ = runCmd.MarkFlagRequired("nodes")
-	rootCommand.AddCommand(runCmd)
+	pipelineCmd.AddCommand(runCmd)
 
 	addImageCommand(rootCommand)
+	addPipelineCommand(pipelineCmd)
+	addNodeCommand(rootCommand)
 }
 
 func addImageCommand(rootCommand *cobra.Command) {
