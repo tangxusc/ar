@@ -16,6 +16,8 @@ require (
 
 replace github.com/bytedance/sonic => github.com/bytedance/sonic v1.9.1
 
+replace cyphar.com/go-pathrs => github.com/cyphar/libpathrs/go-pathrs v0.2.1
+
 require (
 	cyphar.com/go-pathrs v0.2.1 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect

@@ -47,7 +47,7 @@ func NewLoader(pipelinesDir, imagesStoreDir, tmpRoot, runtimeRoot string) *Loade
 	}
 }
 
-func (l *Loader) Load(ctx context.Context, archivePath string) error {
+func (l *Loader) Load(ctx context.Context, archivePath string, cleanTmp bool) error {
 	archiveAbs, err := filepath.Abs(archivePath)
 	if err != nil {
 		return fmt.Errorf("解析镜像路径失败: %w", err)
@@ -105,6 +105,12 @@ func (l *Loader) Load(ctx context.Context, archivePath string) error {
 	}
 
 	logrus.Infof("流水线加载完成: image=%s childImages=%d", imageName, loadedCount)
+	if cleanTmp {
+		if err := os.RemoveAll(workRoot); err != nil {
+			return fmt.Errorf("清理临时目录失败 %s: %w", workRoot, err)
+		}
+		logrus.Infof("已清理临时目录: %s", workRoot)
+	}
 	return nil
 }
 

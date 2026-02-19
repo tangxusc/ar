@@ -13,6 +13,7 @@ import (
 
 func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	var inputArchive string
+	var loadNoCleanTmp bool
 
 	loadCmd := &cobra.Command{
 		Use:   "load",
@@ -28,10 +29,11 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 				config.LoadTmpRoot,
 				config.OciRuntimeRoot,
 			)
-			return loader.Load(ctx, inputArchive)
+			return loader.Load(ctx, inputArchive, !loadNoCleanTmp)
 		},
 	}
 	loadCmd.Flags().StringVarP(&inputArchive, "input", "i", "", "流水线镜像归档路径（.tar 或 .tar.gz）")
+	loadCmd.Flags().BoolVar(&loadNoCleanTmp, "no-clean-tmp", false, "加载完成后保留临时目录（默认会清理 /tmp 下该流水线临时文件）")
 	_ = loadCmd.MarkFlagRequired("input")
 
 	rootCommand.AddCommand(loadCmd)
