@@ -169,10 +169,10 @@ func BuildRunData(taskID, pipelineName string, orderedSteps []TemplateStep, node
 	}
 }
 
-// RunDir 返回流水线运行目录：/var/lib/ar/pipelineName/taskID/
+// RunDir 返回流水线运行目录：/var/lib/ar/tasks/pipelineName/taskID/
 func RunDir(arRoot, pipelineName, taskID string) string {
 	name := sanitizePipelineName(pipelineName)
-	return filepath.Join(arRoot, name, taskID)
+	return filepath.Join(arRoot, "tasks", name, taskID)
 }
 
 // NodeDir 返回某步骤的当前任务目录：runDir/node{index}，设计为挂载到容器 /current-task/
@@ -222,13 +222,14 @@ func ReadPipelineJSON(runDir string) (*PipelineRunData, error) {
 	return &runData, nil
 }
 
-// FindRunDirByTaskID 根据 taskID 在 arRoot 下扫描各流水线目录，找到包含 pipeline.json 的任务目录。
+// FindRunDirByTaskID 根据 taskID 在 arRoot/tasks 下扫描各流水线目录，找到包含 pipeline.json 的任务目录。
 // 用于停止/恢复时仅知 taskId 的场景。返回 runDir 与 nil，未找到则返回错误。
 func FindRunDirByTaskID(arRoot, taskID string) (string, error) {
 	if taskID == "" {
 		return "", fmt.Errorf("taskId 不能为空")
 	}
-	entries, err := os.ReadDir(arRoot)
+	root := filepath.Join(arRoot, "tasks")
+	entries, err := os.ReadDir(root)
 	if err != nil {
 		return "", fmt.Errorf("读取 ar 根目录失败 %s: %w", arRoot, err)
 	}
@@ -236,7 +237,7 @@ func FindRunDirByTaskID(arRoot, taskID string) (string, error) {
 		if !e.IsDir() {
 			continue
 		}
-		runDir := filepath.Join(arRoot, e.Name(), taskID)
+		runDir := filepath.Join(root, e.Name(), taskID)
 		path := filepath.Join(runDir, "pipeline.json")
 		if _, err := os.Stat(path); err == nil {
 			return runDir, nil

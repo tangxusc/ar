@@ -127,7 +127,27 @@ func RunStep(ctx context.Context, runtimeRoot, imagesStoreDir, runDir, nodeDir, 
 		return RunStepResult{ExitCode: -1, Err: err}
 	}
 
-	err = runOneShotContainer(ctx, runtimeRoot, bundleDir, containerID)
+	logsDir := filepath.Join(runDir, "logs")
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("创建日志目录失败: %w", err)}
+	}
+
+	stdoutPath := filepath.Join(logsDir, fmt.Sprintf("%s.stdout", containerID))
+	stderrPath := filepath.Join(logsDir, fmt.Sprintf("%s.stderr", containerID))
+
+	stdoutFile, err := os.Create(stdoutPath)
+	if err != nil {
+		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("创建 stdout 日志文件失败: %w", err)}
+	}
+	defer stdoutFile.Close()
+
+	stderrFile, err := os.Create(stderrPath)
+	if err != nil {
+		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("创建 stderr 日志文件失败: %w", err)}
+	}
+	defer stderrFile.Close()
+
+	err = runOneShotContainer(ctx, runtimeRoot, bundleDir, containerID, stdoutFile, stderrFile)
 	if err != nil {
 		// runOneShotContainer 在非 0 退出时返回 error，可解析或约定 ExitCode
 		return RunStepResult{ExitCode: 1, Err: err}

@@ -90,8 +90,11 @@ func (l *Loader) Load(ctx context.Context, archivePath string, cleanTmp bool) er
 
 	containerID := fmt.Sprintf("ar_load_%d", time.Now().UnixNano())
 	logrus.Infof("开始运行一次性流水线容器: %s", containerID)
-	if err := runOneShotContainer(ctx, l.runtimeRoot, bundleDir, containerID); err != nil {
-		return err
+	// Loader 的一次性容器仍然将 stdout/stderr 聚合到内存，用于错误信息。
+	var out bytes.Buffer
+	if err := runOneShotContainer(ctx, l.runtimeRoot, bundleDir, containerID, &out, &out); err != nil {
+		// 将容器输出附加到错误日志，便于排查加载失败原因。
+		return fmt.Errorf("%w, output: %s", err, strings.TrimSpace(out.String()))
 	}
 
 	logrus.Infof("流水线容器执行完成，开始加载子镜像目录: %s", runtimeImagesDir)
@@ -145,7 +148,7 @@ func (l *Loader) loadAllImagesFromDir(imagesDir string) (int, error) {
 	return loaded, nil
 }
 
-func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerID string) error {
+func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerID string, stdout, stderr io.Writer) error {
 	if strings.TrimSpace(runtimeRoot) == "" {
 		return fmt.Errorf("OCI runtime state root 不能为空")
 	}
@@ -192,7 +195,16 @@ func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerI
 	}()
 
 	var out bytes.Buffer
-	process, err := toLibcontainerProcess(spec.Process, &out)
+	stdoutWriter := io.Writer(&out)
+	stderrWriter := io.Writer(&out)
+	if stdout != nil {
+		stdoutWriter = io.MultiWriter(stdout, &out)
+	}
+	if stderr != nil {
+		stderrWriter = io.MultiWriter(stderr, &out)
+	}
+
+	process, err := toLibcontainerProcess(spec.Process, stdoutWriter, stderrWriter)
 	if err != nil {
 		return err
 	}
@@ -294,7 +306,7 @@ func hasLinuxNamespace(namespaces []specs.LinuxNamespace, namespaceType specs.Li
 	return false
 }
 
-func toLibcontainerProcess(processSpec *specs.Process, output *bytes.Buffer) (*libcontainer.Process, error) {
+func toLibcontainerProcess(processSpec *specs.Process, stdout, stderr io.Writer) (*libcontainer.Process, error) {
 	if processSpec.Terminal {
 		return nil, fmt.Errorf("一次性容器暂不支持 terminal=true")
 	}
@@ -305,8 +317,8 @@ func toLibcontainerProcess(processSpec *specs.Process, output *bytes.Buffer) (*l
 		UID:             int(processSpec.User.UID),
 		GID:             int(processSpec.User.GID),
 		Cwd:             processSpec.Cwd,
-		Stdout:          output,
-		Stderr:          output,
+		Stdout:          stdout,
+		Stderr:          stderr,
 		Label:           processSpec.SelinuxLabel,
 		AppArmorProfile: processSpec.ApparmorProfile,
 	}
