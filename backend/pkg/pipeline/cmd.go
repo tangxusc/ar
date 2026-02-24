@@ -459,10 +459,77 @@ func showOneContainerLogs(runDir, containerID string, follow bool, tailLines int
 func addImageCommand(rootCommand *cobra.Command) {
 	imageCmd := &cobra.Command{
 		Use:   "image",
-		Short: "管理 OCI 镜像（列表、删除、清理）",
-		Long:  "对 load -i 导入的镜像进行列表、删除或 prune 清理。镜像存储在 --images-store-dir 目录下。",
+		Short: "管理 OCI 镜像（拉取、列表、删除、清理）",
+		Long:  "对远程镜像或 load -i 导入的镜像进行拉取、列表、删除或 prune 清理。镜像存储在 --images-store-dir 目录下。",
 	}
 	rootCommand.AddCommand(imageCmd)
+
+	// image login
+	var loginUsername string
+	var loginPassword string
+	var loginPasswordStdin bool
+	loginCmd := &cobra.Command{
+		Use:   "login REGISTRY",
+		Short: "登录镜像仓库（保存凭证供 image pull 使用）",
+		Long:  "参照 docker login，用于保存指定镜像仓库的用户名和密码，凭证会写入 /var/lib/ar/auth.json，仅在本机生效。账号密码是否真正有效，将在后续 image pull 时由 registry 校验。",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			registry := strings.TrimSpace(args[0])
+			if registry == "" {
+				return fmt.Errorf("registry 不能为空，例如: registry.cn-shanghai.aliyuncs.com")
+			}
+
+			if loginPasswordStdin && loginPassword != "" {
+				return fmt.Errorf("--password 与 --password-stdin 不能同时使用")
+			}
+
+			if loginPasswordStdin {
+				data, err := io.ReadAll(os.Stdin)
+				if err != nil {
+					return fmt.Errorf("从标准输入读取密码失败: %w", err)
+				}
+				loginPassword = strings.TrimRight(string(data), "\r\n")
+			}
+
+			if strings.TrimSpace(loginUsername) == "" {
+				return fmt.Errorf("请通过 -u/--username 指定用户名")
+			}
+
+			if err := SaveRegistryAuth(registry, loginUsername, loginPassword); err != nil {
+				return err
+			}
+			logrus.Infof("已保存镜像仓库登录信息(凭证将于后续 image pull 时由 registry 校验): registry=%s", registry)
+			return nil
+		},
+	}
+	loginCmd.Flags().StringVarP(&loginUsername, "username", "u", "", "仓库用户名")
+	loginCmd.Flags().StringVarP(&loginPassword, "password", "p", "", "仓库密码（不推荐，建议使用 --password-stdin）")
+	loginCmd.Flags().BoolVar(&loginPasswordStdin, "password-stdin", false, "从标准输入读取密码")
+	imageCmd.AddCommand(loginCmd)
+
+	// image pull
+	var pullTLSVerify bool
+	pullTLSVerify = true
+	pullCmd := &cobra.Command{
+		Use:   "pull IMAGE",
+		Short: "从远程仓库拉取镜像到本地镜像存储目录",
+		Long:  "从远程镜像仓库拉取镜像，并以 OCI layout 形式写入 --images-store-dir 指定的目录下，目录名为经过 sanitize 处理后的镜像名称。",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			imageRef := strings.TrimSpace(args[0])
+			if imageRef == "" {
+				return fmt.Errorf("镜像引用不能为空，例如: ar image pull registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0")
+			}
+			dest, err := PullImageToStore(imageRef, config.ImagesStoreDir, pullTLSVerify)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("镜像已拉取到本地: %s", dest)
+			return nil
+		},
+	}
+	pullCmd.Flags().BoolVar(&pullTLSVerify, "tls-verify", true, "是否验证 TLS 证书（关闭后允许跳过证书校验，仅用于受信环境）")
+	imageCmd.AddCommand(pullCmd)
 
 	// image list / image ls
 	listCmd := &cobra.Command{
