@@ -531,6 +531,32 @@ func addImageCommand(rootCommand *cobra.Command) {
 	pullCmd.Flags().BoolVar(&pullTLSVerify, "tls-verify", true, "是否验证 TLS 证书（关闭后允许跳过证书校验，仅用于受信环境）")
 	imageCmd.AddCommand(pullCmd)
 
+	// image push
+	var pushTLSVerify bool
+	var pushTargetRef string
+	pushTLSVerify = true
+	pushCmd := &cobra.Command{
+		Use:   "push IMAGE",
+		Short: "将本地镜像推送到远程镜像仓库",
+		Long:  "从 --images-store-dir 打开的 OCI layout 镜像推送到远程镜像仓库。IMAGE 可以是本地镜像存储目录名或原始镜像引用名，默认使用镜像记录的原始引用名作为推送目标，可通过 --target 覆盖。",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			imageNameOrRef := strings.TrimSpace(args[0])
+			if imageNameOrRef == "" {
+				return fmt.Errorf("镜像名称或引用不能为空，例如: ar image push alpine-3_18_0 或 ar image push registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0")
+			}
+			pushedRef, err := PushImageFromStore(imageNameOrRef, config.ImagesStoreDir, pushTargetRef, pushTLSVerify)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("镜像已推送到远程仓库: %s", pushedRef)
+			return nil
+		},
+	}
+	pushCmd.Flags().BoolVar(&pushTLSVerify, "tls-verify", true, "是否验证 TLS 证书（关闭后允许跳过证书校验，仅用于受信环境）")
+	pushCmd.Flags().StringVar(&pushTargetRef, "target", "", "目标镜像引用名，例如: registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0（未指定时使用本地镜像记录的原始引用名）")
+	imageCmd.AddCommand(pushCmd)
+
 	// image list / image ls
 	listCmd := &cobra.Command{
 		Use:     "list",

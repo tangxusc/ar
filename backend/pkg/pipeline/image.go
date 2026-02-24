@@ -245,6 +245,87 @@ func PullImageToStore(imageRef, storeDir string, tlsVerify bool) (string, error)
 	return dest, nil
 }
 
+// PushImageFromStore 将本地镜像存储目录中的镜像推送到远程镜像仓库。
+// imageNameOrRef 可以是存储目录名（ListImages 第一列）或原始镜像引用名（ListImages 第二列）。
+// targetRef 若为空，则优先使用本地镜像记录的原始引用名；否则推送为 targetRef。
+func PushImageFromStore(imageNameOrRef, storeDir, targetRef string, tlsVerify bool) (string, error) {
+	imageNameOrRef = strings.TrimSpace(imageNameOrRef)
+	if imageNameOrRef == "" {
+		return "", fmt.Errorf("镜像名称或引用不能为空")
+	}
+	if strings.TrimSpace(storeDir) == "" {
+		return "", fmt.Errorf("镜像存储目录不能为空")
+	}
+
+	list, err := ListImages(storeDir)
+	if err != nil {
+		return "", err
+	}
+	if len(list) == 0 {
+		return "", fmt.Errorf("当前本地镜像存储目录下无任何镜像（%s）", storeDir)
+	}
+
+	safe := sanitizeImageName(imageNameOrRef)
+	var matched *ImageEntry
+	for i := range list {
+		e := &list[i]
+		if e.Name == imageNameOrRef || e.Ref == imageNameOrRef || (safe != "" && e.Name == safe) {
+			matched = e
+			break
+		}
+	}
+	if matched == nil {
+		return "", fmt.Errorf("在本地镜像存储目录中未找到指定镜像: %s", imageNameOrRef)
+	}
+
+	pushRefStr := strings.TrimSpace(targetRef)
+	if pushRefStr == "" {
+		if strings.TrimSpace(matched.Ref) == "" {
+			return "", fmt.Errorf("本地镜像未记录原始引用名，请通过 --target 指定要推送到的镜像名")
+		}
+		pushRefStr = matched.Ref
+	}
+
+	nameOptions := []name.Option{}
+	if !tlsVerify {
+		// 允许使用 http 以及跳过证书校验（与部分私有仓库兼容）。
+		nameOptions = append(nameOptions, name.Insecure)
+	}
+	ref, err := name.ParseReference(pushRefStr, nameOptions...)
+	if err != nil {
+		return "", fmt.Errorf("解析目标镜像引用失败: %w", err)
+	}
+
+	remoteOptions := []remote.Option{}
+	if !tlsVerify {
+		remoteOptions = append(remoteOptions, remote.WithTransport(&http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec // 由 --tls-verify 控制，允许跳过证书校验
+			},
+		}))
+	}
+
+	// 若存在针对该 registry 的登录信息，则使用 basic auth（与 PullImageToStore 行为保持一致）。
+	if entry, ok, _ := getAuthForRegistry(ref.Context().RegistryStr()); ok {
+		remoteOptions = append(remoteOptions, remote.WithAuth(&authn.Basic{
+			Username: entry.Username,
+			Password: entry.Password,
+		}))
+	}
+
+	// 从本地 store 打开镜像。
+	img, err := OpenImageFromStore(storeDir, matched.Name)
+	if err != nil {
+		return "", fmt.Errorf("打开本地镜像失败: %w", err)
+	}
+
+	if err := remote.Write(ref, img, remoteOptions...); err != nil {
+		return "", fmt.Errorf("推送镜像失败: %w", err)
+	}
+	return ref.Name(), nil
+}
+
 // readImageRefFromLayout 从 OCI layout 目录读取 org.opencontainers.image.ref.name 注解。
 func readImageRefFromLayout(layoutPath string) (string, error) {
 	indexPath := filepath.Join(layoutPath, "index.json")
