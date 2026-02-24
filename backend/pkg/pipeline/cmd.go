@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/tangxusc/ar/backend/pkg/config"
+	"github.com/tangxusc/ar/backend/pkg/container"
 )
 
 func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
@@ -81,9 +82,206 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	_ = runCmd.MarkFlagRequired("nodes")
 	pipelineCmd.AddCommand(runCmd)
 
+	// ar pipeline task：任务相关操作（list / stop / resume 等）
+	var listPipelineName string
+	var stopTaskID string
+	var resumeTaskID string
+	taskCmd := &cobra.Command{
+		Use:   "task",
+		Short: "管理流水线任务（列出、停止、恢复等）",
+	}
+	pipelineCmd.AddCommand(taskCmd)
+
+	// ar pipeline task list
+	taskListCmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "列出正在运行的流水线及其正在运行的容器",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			arRoot := filepath.Dir(config.PipelinesDir)
+			return listRunningTasks(arRoot, listPipelineName)
+		},
+	}
+	taskListCmd.Flags().StringVarP(&listPipelineName, "pipeline", "p", "", "按流水线名称过滤，仅展示指定流水线的运行任务")
+	taskCmd.AddCommand(taskListCmd)
+
+	// ar pipeline task stop -t <taskId>
+	taskStopCmd := &cobra.Command{
+		Use:   "stop",
+		Short: "停止指定流水线任务（按 taskId）",
+		Long:  "根据 taskId 查找对应流水线运行目录，停止正在运行的容器并将 pending/running 步骤状态标记为 cancelled，写回 pipeline.json（参照 design/停止流水线流程.md）。",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if stopTaskID == "" {
+				return fmt.Errorf("请通过 -t 指定要停止的流水线任务 ID（taskId）")
+			}
+			arRoot := filepath.Dir(config.PipelinesDir)
+			return stopPipelineTask(arRoot, config.OciRuntimeRoot, stopTaskID)
+		},
+	}
+	taskStopCmd.Flags().StringVarP(&stopTaskID, "task", "t", "", "要停止的流水线任务 ID（必填）")
+	_ = taskStopCmd.MarkFlagRequired("task")
+	taskCmd.AddCommand(taskStopCmd)
+
+	// ar pipeline task resume -t <taskId>
+	taskResumeCmd := &cobra.Command{
+		Use:   "resume",
+		Short: "恢复被取消的流水线任务（按 taskId）",
+		Long:  "根据 taskId 查找对应流水线运行目录，读取 pipeline.json，确定上次执行到的步骤并从该步骤开始继续执行（参照 design/恢复流水线执行.md）。",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if resumeTaskID == "" {
+				return fmt.Errorf("请通过 -t 指定要恢复的流水线任务 ID（taskId）")
+			}
+			arRoot := filepath.Dir(config.PipelinesDir)
+			runner := NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
+			if err := runner.Resume(ctx, resumeTaskID); err != nil {
+				return err
+			}
+			logrus.Infof("流水线任务已恢复执行: taskId=%s", resumeTaskID)
+			return nil
+		},
+	}
+	taskResumeCmd.Flags().StringVarP(&resumeTaskID, "task", "t", "", "要恢复的流水线任务 ID（必填）")
+	_ = taskResumeCmd.MarkFlagRequired("task")
+	taskCmd.AddCommand(taskResumeCmd)
+
 	addImageCommand(rootCommand)
 	addPipelineCommand(pipelineCmd)
 	addNodeCommand(rootCommand)
+}
+
+// listRunningTasks 扫描 /var/lib/ar/tasks 目录，列出所有包含 running 步骤的流水线任务。
+// arRoot 一般为 /var/lib/ar。
+// filterPipelineName 若非空，则仅展示该流水线（按 sanitizePipelineName 处理后的名称匹配目录）。
+func listRunningTasks(arRoot, filterPipelineName string) error {
+	root := filepath.Join(arRoot, "tasks")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logrus.Info("当前无任何流水线任务")
+			return nil
+		}
+		return fmt.Errorf("读取任务根目录失败 %s: %w", root, err)
+	}
+
+	filterNameSanitized := ""
+	if filterPipelineName != "" {
+		filterNameSanitized = sanitizePipelineName(filterPipelineName)
+		if filterNameSanitized == "" {
+			return fmt.Errorf("流水线名称无效: %s", filterPipelineName)
+		}
+	}
+
+	type runningRow struct {
+		pipelineName string
+		taskID       string
+		stepName     string
+		containerID  string
+	}
+	var rows []runningRow
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		pipelineDirName := e.Name() // 已经是 sanitize 后的目录名
+		if filterNameSanitized != "" && pipelineDirName != filterNameSanitized {
+			continue
+		}
+		pipelineTasksDir := filepath.Join(root, pipelineDirName)
+		taskEntries, err := os.ReadDir(pipelineTasksDir)
+		if err != nil {
+			logrus.WithError(err).Warnf("读取流水线任务目录失败: %s", pipelineTasksDir)
+			continue
+		}
+		for _, te := range taskEntries {
+			if !te.IsDir() {
+				continue
+			}
+			taskID := te.Name()
+			runDir := filepath.Join(pipelineTasksDir, taskID)
+			runData, err := ReadPipelineJSON(runDir)
+			if err != nil {
+				logrus.WithError(err).Warnf("读取任务状态失败: %s", filepath.Join(runDir, "pipeline.json"))
+				continue
+			}
+			pipelineName := runData.PipelineName
+			for i, step := range runData.Steps {
+				if step.Status != StatusRunning {
+					continue
+				}
+				containerID := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, step.Name, i+1)
+				rows = append(rows, runningRow{
+					pipelineName: pipelineName,
+					taskID:       taskID,
+					stepName:     step.Name,
+					containerID:  containerID,
+				})
+			}
+		}
+	}
+
+	if len(rows) == 0 {
+		if filterPipelineName != "" {
+			logrus.Infof("未找到正在运行的流水线任务（pipeline=%s）", filterPipelineName)
+		} else {
+			logrus.Info("当前无正在运行的流水线任务")
+		}
+		return nil
+	}
+
+	fmt.Println("PIPELINE\tTASK_ID\tCONTAINER_ID\tSTEP")
+	for _, r := range rows {
+		fmt.Printf("%s\t%s\t%s\t%s\n", r.pipelineName, r.taskID, r.containerID, r.stepName)
+	}
+	return nil
+}
+
+// stopPipelineTask 参照 design/停止流水线流程.md，实现按 taskId 停止流水线任务：
+// 1. 根据 taskId 找到运行目录（包含 pipeline.json）。
+// 2. 标记 pending/running 步骤为 cancelled。
+// 3. 对于 running 步骤，调用 OCI runtime 停止并删除对应容器。
+// 4. 写回 pipeline.json。
+func stopPipelineTask(arRoot, runtimeRoot, taskID string) error {
+	if taskID == "" {
+		return fmt.Errorf("taskId 不能为空")
+	}
+	runDir, err := FindRunDirByTaskID(arRoot, taskID)
+	if err != nil {
+		return err
+	}
+
+	runData, err := ReadPipelineJSON(runDir)
+	if err != nil {
+		return fmt.Errorf("读取 pipeline.json 失败: %w", err)
+	}
+
+	// 根据 runDir 反推出流水线目录名（已是 sanitize 之后的名字）。
+	pipelineDirName := filepath.Base(filepath.Dir(runDir))
+
+	// 按设计：正在运行的节点需要停止容器，未运行的节点标记为取消。
+	for i := range runData.Steps {
+		step := &runData.Steps[i]
+		switch step.Status {
+		case StatusRunning:
+			// 计算容器 ID，与 Run()/Resume() 时保持一致。
+			containerID := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, step.Name, i+1)
+			if err := container.StopAndRemoveOCIContainers(runtimeRoot, containerID); err != nil {
+				logrus.WithError(err).Warnf("停止流水线任务容器失败: %s", containerID)
+			}
+			step.Status = StatusCancelled
+		case StatusPending:
+			step.Status = StatusCancelled
+		default:
+			// success / failed / cancelled 等状态保持不变
+		}
+	}
+
+	if err := WritePipelineJSON(runDir, runData); err != nil {
+		return fmt.Errorf("写回 pipeline.json 失败: %w", err)
+	}
+
+	logrus.Infof("流水线任务已停止: taskId=%s runDir=%s", taskID, runDir)
+	return nil
 }
 
 func addImageCommand(rootCommand *cobra.Command) {
