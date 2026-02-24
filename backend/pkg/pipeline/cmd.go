@@ -3,8 +3,12 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -82,10 +86,14 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	_ = runCmd.MarkFlagRequired("nodes")
 	pipelineCmd.AddCommand(runCmd)
 
-	// ar pipeline task：任务相关操作（list / stop / resume 等）
+	// ar pipeline task：任务相关操作（list / stop / resume / log 等）
 	var listPipelineName string
 	var stopTaskID string
 	var resumeTaskID string
+	var logTaskID string
+	var logContainerID string
+	var logFollow bool
+	var logTail string
 	taskCmd := &cobra.Command{
 		Use:   "task",
 		Short: "管理流水线任务（列出、停止、恢复等）",
@@ -143,6 +151,36 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	taskResumeCmd.Flags().StringVarP(&resumeTaskID, "task", "t", "", "要恢复的流水线任务 ID（必填）")
 	_ = taskResumeCmd.MarkFlagRequired("task")
 	taskCmd.AddCommand(taskResumeCmd)
+
+	// ar pipeline task log -t <taskId> -c <containerId>
+	taskLogCmd := &cobra.Command{
+		Use:   "log",
+		Short: "查看指定流水线任务中某容器的日志",
+		Long:  "根据 taskId 查找对应流水线运行目录，从 logs 目录中读取容器的 stdout/stderr 日志文件并输出，支持 --follow 与 --tail（参照 docker logs 与 design/执行流水线流程.md）。未指定 --container 时会输出该任务下所有步骤容器的日志。",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if logTaskID == "" {
+				return fmt.Errorf("请通过 -t 指定流水线任务 ID（taskId）")
+			}
+
+			tailLines := -1
+			if strings.ToLower(strings.TrimSpace(logTail)) != "" && strings.ToLower(strings.TrimSpace(logTail)) != "all" {
+				n, err := strconv.Atoi(logTail)
+				if err != nil || n < 0 {
+					return fmt.Errorf("无效的 --tail 值: %s（应为非负整数或 all）", logTail)
+				}
+				tailLines = n
+			}
+
+			arRoot := filepath.Dir(config.PipelinesDir)
+			return showTaskContainerLogs(arRoot, logTaskID, logContainerID, logFollow, tailLines)
+		},
+	}
+	taskLogCmd.Flags().StringVarP(&logTaskID, "task", "t", "", "流水线任务 ID（必填）")
+	taskLogCmd.Flags().StringVarP(&logContainerID, "container", "c", "", "容器 ID（可选，通常形如 ar_<pipeline>_<step>_<index>，不指定时输出该任务下所有步骤容器的日志）")
+	taskLogCmd.Flags().BoolVarP(&logFollow, "follow", "f", false, "持续输出日志（类似 docker logs -f）")
+	taskLogCmd.Flags().StringVar(&logTail, "tail", "all", "仅输出最后 N 行（默认 all，输出全部）")
+	_ = taskLogCmd.MarkFlagRequired("task")
+	taskCmd.AddCommand(taskLogCmd)
 
 	addImageCommand(rootCommand)
 	addPipelineCommand(pipelineCmd)
@@ -281,6 +319,140 @@ func stopPipelineTask(arRoot, runtimeRoot, taskID string) error {
 	}
 
 	logrus.Infof("流水线任务已停止: taskId=%s runDir=%s", taskID, runDir)
+	return nil
+}
+
+// showTaskContainerLogs 根据 taskId 和容器 ID 输出对应容器的 stdout/stderr 日志。
+// 日志文件位于任务运行目录下的 logs 子目录中，命名为 <containerID>.stdout 和 <containerID>.stderr。
+// 支持类似 docker logs 的 --follow 与 --tail。
+// 若 containerID 为空，则按照 pipeline.json 中的步骤依次计算容器 ID，并输出该任务下所有步骤容器的日志。
+func showTaskContainerLogs(arRoot, taskID, containerID string, follow bool, tailLines int) error {
+	if strings.TrimSpace(taskID) == "" {
+		return fmt.Errorf("taskId 不能为空")
+	}
+
+	runDir, err := FindRunDirByTaskID(arRoot, taskID)
+	if err != nil {
+		return err
+	}
+
+	// 未指定 containerId 时，遍历该任务下所有步骤的容器日志。
+	if strings.TrimSpace(containerID) == "" {
+		runData, err := ReadPipelineJSON(runDir)
+		if err != nil {
+			return fmt.Errorf("读取 pipeline.json 失败: %w", err)
+		}
+		pipelineDirName := filepath.Base(filepath.Dir(runDir))
+
+		for i, step := range runData.Steps {
+			cid := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, step.Name, i+1)
+			if err := showOneContainerLogs(runDir, cid, follow, tailLines); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	return showOneContainerLogs(runDir, containerID, follow, tailLines)
+}
+
+// showOneContainerLogs 输出单个容器的 stdout/stderr 日志。
+func showOneContainerLogs(runDir, containerID string, follow bool, tailLines int) error {
+	logsDir := filepath.Join(runDir, "logs")
+	stdoutPath := filepath.Join(logsDir, fmt.Sprintf("%s.stdout", containerID))
+	stderrPath := filepath.Join(logsDir, fmt.Sprintf("%s.stderr", containerID))
+
+	printOne := func(title, path string) error {
+		f, err := os.Open(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				logrus.Infof("%s 日志不存在: %s", title, path)
+				return nil
+			}
+			return fmt.Errorf("打开 %s 日志失败 %s: %w", title, path, err)
+		}
+		defer f.Close()
+
+		fmt.Printf("===== %s %s (%s) =====\n", containerID, title, path)
+
+		// 初始输出：根据 tailLines 决定输出全部还是最后 N 行。
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return fmt.Errorf("读取 %s 日志失败 %s: %w", title, path, err)
+		}
+		if tailLines >= 0 {
+			lines := strings.Split(string(data), "\n")
+			if tailLines == 0 {
+				// 不输出任何历史行（与 docker logs --tail 0 类似）
+				lines = nil
+			} else if tailLines < len(lines) {
+				lines = lines[len(lines)-tailLines:]
+			}
+			if len(lines) > 0 {
+				fmt.Println(strings.Join(lines, "\n"))
+			}
+		} else {
+			// 输出全部
+			if len(data) > 0 {
+				if _, err := os.Stdout.Write(data); err != nil {
+					return fmt.Errorf("写出 %s 日志失败 %s: %w", title, path, err)
+				}
+			}
+		}
+
+		// 若不跟随，直接结束。
+		if !follow {
+			fmt.Println()
+			return nil
+		}
+
+		// 跟随模式：从当前文件末尾开始轮询追加内容。
+		offset, err := f.Seek(0, io.SeekEnd)
+		if err != nil {
+			return fmt.Errorf("定位到 %s 日志文件末尾失败 %s: %w", title, path, err)
+		}
+
+		for {
+			time.Sleep(1 * time.Second)
+
+			stat, err := f.Stat()
+			if err != nil {
+				if os.IsNotExist(err) {
+					logrus.Infof("%s 日志文件已被删除: %s", title, path)
+					return nil
+				}
+				return fmt.Errorf("获取 %s 日志状态失败 %s: %w", title, path, err)
+			}
+
+			if stat.Size() <= offset {
+				continue
+			}
+
+			// 读取新增内容
+			if _, err := f.Seek(offset, io.SeekStart); err != nil {
+				return fmt.Errorf("重新定位 %s 日志偏移失败 %s: %w", title, path, err)
+			}
+			buf := make([]byte, stat.Size()-offset)
+			n, err := f.Read(buf)
+			if err != nil && err != io.EOF {
+				return fmt.Errorf("读取追加的 %s 日志失败 %s: %w", title, path, err)
+			}
+			if n > 0 {
+				if _, err := os.Stdout.Write(buf[:n]); err != nil {
+					return fmt.Errorf("写出追加的 %s 日志失败 %s: %w", title, path, err)
+				}
+				offset += int64(n)
+			}
+		}
+	}
+
+	if err := printOne("STDOUT", stdoutPath); err != nil {
+		return err
+	}
+	if err := printOne("STDERR", stderrPath); err != nil {
+		return err
+	}
+
 	return nil
 }
 
