@@ -605,6 +605,35 @@ func addImageCommand(rootCommand *cobra.Command) {
 	pushCmd.Flags().StringVar(&pushTargetRef, "target", "", "目标镜像引用名，例如: registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0（未指定时使用本地镜像记录的原始引用名）")
 	imageCmd.AddCommand(pushCmd)
 
+	// image tag（用法参照 docker tag：allrun image tag SOURCE_IMAGE TARGET_IMAGE）
+	tagCmd := &cobra.Command{
+		Use:   "tag SOURCE_IMAGE TARGET_IMAGE",
+		Short: "为本地镜像创建新名称（重命名/打标签）",
+		Long:  "参照 docker tag：将 SOURCE_IMAGE 在本地镜像存储中另存为 TARGET_IMAGE。SOURCE_IMAGE 可为 list 输出的存储目录名或原始引用名；TARGET_IMAGE 为新的镜像引用名（如 myregistry.com/foo/bar:tag），存储目录名将按其自动生成。",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sourceRef := strings.TrimSpace(args[0])
+			targetRef := strings.TrimSpace(args[1])
+			if sourceRef == "" {
+				return fmt.Errorf("SOURCE_IMAGE 不能为空，例如: allrun image tag alpine-3_18_0 myreg.io/my/alpine:v1")
+			}
+			if targetRef == "" {
+				return fmt.Errorf("TARGET_IMAGE 不能为空，例如: allrun image tag alpine-3_18_0 myreg.io/my/alpine:v1")
+			}
+			img, err := OpenImageFromStore(config.ImagesStoreDir, sourceRef)
+			if err != nil {
+				return err
+			}
+			dest, err := writeImageToStore(img, targetRef, config.ImagesStoreDir)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("已为镜像打标签: %s -> %s（存储目录: %s）", sourceRef, targetRef, dest)
+			return nil
+		},
+	}
+	imageCmd.AddCommand(tagCmd)
+
 	// image list / image ls
 	listCmd := &cobra.Command{
 		Use:     "list",
