@@ -20,7 +20,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/opencontainers/runc/libcontainer"
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -82,6 +81,9 @@ func (l *Loader) Load(ctx context.Context, archivePath string, cleanTmp bool) er
 	if err := extractRootfsFromImage(pipelineImage, rootfsDir); err != nil {
 		return fmt.Errorf("解包流水线镜像失败: %w", err)
 	}
+	if err := ensureEntrypointInRootfs(pipelineImage, rootfsDir); err != nil {
+		return err
+	}
 
 	logrus.Infof("开始生成 OCI runtime spec: %s/config.json", bundleDir)
 	if err := writeRuntimeSpec(bundleDir, pipelineImage, l.pipelinesDir, runtimeImagesDir); err != nil {
@@ -108,6 +110,71 @@ func (l *Loader) Load(ctx context.Context, archivePath string, cleanTmp bool) er
 	}
 
 	logrus.Infof("流水线加载完成: image=%s childImages=%d", imageName, loadedCount)
+	if cleanTmp {
+		if err := os.RemoveAll(workRoot); err != nil {
+			return fmt.Errorf("清理临时目录失败 %s: %w", workRoot, err)
+		}
+		logrus.Infof("已清理临时目录: %s", workRoot)
+	}
+	return nil
+}
+
+// LoadFromStore 从 images-store-dir 中已存在的流水线镜像加载：解包 rootfs、运行一次性容器、
+// 将模板与子镜像写入 pipelinesDir 并导入子镜像到 images-store-dir。
+func (l *Loader) LoadFromStore(ctx context.Context, imageNameOrRef string, cleanTmp bool) error {
+	pipelineImage, err := OpenImageFromStore(l.imagesStoreDir, imageNameOrRef)
+	if err != nil {
+		return fmt.Errorf("从本地镜像存储打开流水线镜像失败: %w", err)
+	}
+
+	imageName := sanitizeImageName(imageNameOrRef)
+	if imageName == "" {
+		imageName = "pipeline"
+	}
+
+	workRoot := filepath.Join(l.tmpRoot, imageName)
+	bundleDir := filepath.Join(workRoot, "bundle")
+	rootfsDir := filepath.Join(bundleDir, "rootfs")
+	runtimeImagesDir := filepath.Join(workRoot, "images")
+
+	if err := os.RemoveAll(workRoot); err != nil {
+		return fmt.Errorf("清理旧的临时目录失败 %s: %w", workRoot, err)
+	}
+	if err := ensureDirs(l.pipelinesDir, l.imagesStoreDir, rootfsDir, runtimeImagesDir); err != nil {
+		return err
+	}
+
+	logrus.Infof("开始解包流水线镜像 rootfs: %s (from store)", rootfsDir)
+	if err := extractRootfsFromImage(pipelineImage, rootfsDir); err != nil {
+		return fmt.Errorf("解包流水线镜像失败: %w", err)
+	}
+	if err := ensureEntrypointInRootfs(pipelineImage, rootfsDir); err != nil {
+		return err
+	}
+
+	logrus.Infof("开始生成 OCI runtime spec: %s/config.json", bundleDir)
+	if err := writeRuntimeSpec(bundleDir, pipelineImage, l.pipelinesDir, runtimeImagesDir); err != nil {
+		return fmt.Errorf("生成 OCI 运行时配置失败: %w", err)
+	}
+
+	containerID := fmt.Sprintf("ar_load_%d", time.Now().UnixNano())
+	logrus.Infof("开始运行一次性流水线容器: %s", containerID)
+	var out bytes.Buffer
+	if err := runOneShotContainer(ctx, l.runtimeRoot, bundleDir, containerID, &out, &out); err != nil {
+		return fmt.Errorf("%w, output: %s", err, strings.TrimSpace(out.String()))
+	}
+
+	logrus.Infof("流水线容器执行完成，开始加载子镜像目录: %s", runtimeImagesDir)
+	loadedCount, err := l.loadAllImagesFromDir(runtimeImagesDir)
+	if err != nil {
+		return err
+	}
+
+	if err := os.RemoveAll(runtimeImagesDir); err != nil {
+		return fmt.Errorf("子镜像加载完成后清理目录失败 %s: %w", runtimeImagesDir, err)
+	}
+
+	logrus.Infof("流水线加载完成(来自本地存储): image=%s childImages=%d", imageName, loadedCount)
 	if cleanTmp {
 		if err := os.RemoveAll(workRoot); err != nil {
 			return fmt.Errorf("清理临时目录失败 %s: %w", workRoot, err)
@@ -157,8 +224,11 @@ func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerI
 	if err != nil {
 		return err
 	}
-	if err := ensureRootlessRuntimeSpec(spec); err != nil {
-		return err
+	// 仅在非 root 时启用 rootless（UserNamespace）
+	if os.Geteuid() != 0 {
+		if err := ensureRootlessRuntimeSpec(spec); err != nil {
+			return err
+		}
 	}
 
 	if err := os.MkdirAll(runtimeRoot, 0700); err != nil {
@@ -176,11 +246,12 @@ func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerI
 		_ = os.Chdir(oldWD)
 	}()
 
+	rootless := os.Geteuid() != 0
 	containerCfg, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:      containerID,
 		Spec:            spec,
-		RootlessEUID:    true,
-		RootlessCgroups: true,
+		RootlessEUID:    rootless,
+		RootlessCgroups: rootless,
 	})
 	if err != nil {
 		return fmt.Errorf("根据 OCI spec 构建容器配置失败: %w", err)
@@ -360,6 +431,18 @@ func writeRuntimeSpec(bundleDir string, image v1.Image, pipelinesDir, runtimeIma
 	if len(args) == 0 {
 		return fmt.Errorf("镜像缺少 entrypoint/cmd，无法运行一次性容器")
 	}
+	// 使用 /bin/sh 显式执行脚本类 entrypoint，避免内核解析 shebang 时因解释器路径或 CRLF 等问题报 "no such file or directory"
+	if len(args) == 1 && (args[0] == "/entrypoint.sh" || strings.HasSuffix(args[0], ".sh")) {
+		args = append([]string{"/bin/sh"}, args...)
+		// 确保 rootfs 中存在 /bin/sh（来自 base 层），否则 runc 会报 "stat /bin/sh: no such file or directory"
+		shPath := filepath.Join(bundleDir, "rootfs", "bin", "sh")
+		if _, err := os.Stat(shPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("rootfs 中缺少 /bin/sh，无法执行 entrypoint 脚本；请确认流水线镜像是通过 ar pipeline build 正确构建的（含 base 层）且解包了全部镜像层")
+			}
+			return fmt.Errorf("检查 rootfs/bin/sh 失败: %w", err)
+		}
+	}
 
 	env := append([]string{}, cfg.Config.Env...)
 	if !containsEnvKey(env, "PATH") {
@@ -474,16 +557,58 @@ func writeRuntimeSpec(bundleDir string, image v1.Image, pipelinesDir, runtimeIma
 	return nil
 }
 
+// ensureEntrypointInRootfs 检查镜像配置的 entrypoint 在 rootfs 中是否存在，避免运行时出现 "no such file or directory"。
+func ensureEntrypointInRootfs(image v1.Image, rootfsDir string) error {
+	cfg, err := image.ConfigFile()
+	if err != nil {
+		return fmt.Errorf("读取镜像配置失败: %w", err)
+	}
+	args := append([]string{}, cfg.Config.Entrypoint...)
+	args = append(args, cfg.Config.Cmd...)
+	if len(args) == 0 {
+		return nil
+	}
+	entryPath := strings.TrimPrefix(args[0], "/")
+	if entryPath == "" {
+		return nil
+	}
+	absPath := filepath.Join(rootfsDir, entryPath)
+	st, err := os.Stat(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("镜像不是有效的流水线镜像：rootfs 中缺少 entrypoint %s（请使用 ar pipeline build 构建流水线镜像后再加载，或检查本地镜像是否为流水线镜像）", args[0])
+		}
+		return fmt.Errorf("检查 entrypoint 失败 %s: %w", absPath, err)
+	}
+	if st.Mode().IsDir() {
+		return fmt.Errorf("镜像 entrypoint %s 是目录而非可执行文件", args[0])
+	}
+	return nil
+}
+
 func extractRootfsFromImage(image v1.Image, rootfsDir string) error {
 	if err := os.MkdirAll(rootfsDir, 0755); err != nil {
 		return fmt.Errorf("创建 rootfs 目录失败: %w", err)
 	}
 
-	stream := mutate.Extract(image)
-	defer stream.Close()
-
-	if err := extractTarStream(stream, rootfsDir); err != nil {
-		return fmt.Errorf("解压 rootfs 失败: %w", err)
+	layers, err := image.Layers()
+	if err != nil {
+		return fmt.Errorf("获取镜像层列表失败: %w", err)
+	}
+	// 按层顺序解压（base 先，再逐层叠加），确保 rootfs 包含完整文件系统（含 /bin/sh 等 base 层内容）。
+	// 不依赖 mutate.Extract，避免从 OCI layout 打开的 image 在合并层时出现只解出顶层的问题。
+	for i, layer := range layers {
+		stream, err := layer.Uncompressed()
+		if err != nil {
+			return fmt.Errorf("读取第 %d 层失败: %w", i+1, err)
+		}
+		if err := extractTarStream(stream, rootfsDir); err != nil {
+			_ = stream.Close()
+			return fmt.Errorf("解压第 %d 层失败: %w", i+1, err)
+		}
+		if err := stream.Close(); err != nil {
+			return fmt.Errorf("关闭第 %d 层流失败: %w", i+1, err)
+		}
 	}
 	return nil
 }

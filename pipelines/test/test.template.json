@@ -1,0 +1,15 @@
+[
+    {
+        "name": "alpine",
+        "image": "alpine:latest",
+        "entrypoint": "cat",
+        "args": [
+            "/etc/os-release",
+            "/etc/hosts"
+        ],
+        "env": [
+            "env1=value1",
+            "env2=value2"
+        ]
+    }
+]

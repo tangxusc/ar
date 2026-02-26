@@ -192,57 +192,59 @@ func OpenImageFromStore(storeDir, imageNameOrRef string) (v1.Image, error) {
 	return nil, fmt.Errorf("镜像 index 中无可用镜像: %s", layoutPath)
 }
 
-// PullImageToStore 从远程镜像仓库拉取镜像，并以 OCI layout 形式写入本地镜像存储目录。
-// imageRef 例如: registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0
-// storeDir 使用全局 flags 中的 --images-store-dir。
-func PullImageToStore(imageRef, storeDir string, tlsVerify bool) (string, error) {
+// pullRemoteImage 从远程拉取镜像到内存，供 PullImage / PullImageToStore 复用。
+func pullRemoteImage(imageRef string, tlsVerify bool) (v1.Image, error) {
 	refStr := strings.TrimSpace(imageRef)
 	if refStr == "" {
-		return "", fmt.Errorf("镜像引用不能为空")
+		return nil, fmt.Errorf("镜像引用不能为空")
 	}
-	if strings.TrimSpace(storeDir) == "" {
-		return "", fmt.Errorf("镜像存储目录不能为空")
-	}
-
 	nameOptions := []name.Option{}
 	if !tlsVerify {
-		// 允许使用 http 以及跳过证书校验（与部分私有仓库兼容）。
 		nameOptions = append(nameOptions, name.Insecure)
 	}
-
 	ref, err := name.ParseReference(refStr, nameOptions...)
 	if err != nil {
-		return "", fmt.Errorf("解析镜像引用失败: %w", err)
+		return nil, fmt.Errorf("解析镜像引用失败: %w", err)
 	}
-
 	remoteOptions := []remote.Option{}
 	if !tlsVerify {
 		remoteOptions = append(remoteOptions, remote.WithTransport(&http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, //nolint:gosec // 由 --tls-verify 控制，允许跳过证书校验
+				InsecureSkipVerify: true, //nolint:gosec // 由 --tls-verify 控制
 			},
 		}))
 	}
-
-	// 若存在针对该 registry 的登录信息，则使用 basic auth。
 	if entry, ok, _ := getAuthForRegistry(ref.Context().RegistryStr()); ok {
 		remoteOptions = append(remoteOptions, remote.WithAuth(&authn.Basic{
 			Username: entry.Username,
 			Password: entry.Password,
 		}))
 	}
-
 	img, err := remote.Image(ref, remoteOptions...)
 	if err != nil {
-		return "", fmt.Errorf("拉取镜像失败: %w", err)
+		return nil, fmt.Errorf("拉取镜像失败: %w", err)
 	}
+	return img, nil
+}
 
-	dest, err := writeImageToStore(img, refStr, storeDir)
+// PullImage 从远程拉取镜像到内存，不写入存储。供构建流水线镜像时拉取 base 等使用。
+func PullImage(imageRef string, tlsVerify bool) (v1.Image, error) {
+	return pullRemoteImage(imageRef, tlsVerify)
+}
+
+// PullImageToStore 从远程镜像仓库拉取镜像，并以 OCI layout 形式写入本地镜像存储目录。
+// imageRef 例如: registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0
+// storeDir 使用全局 flags 中的 --images-store-dir。
+func PullImageToStore(imageRef, storeDir string, tlsVerify bool) (string, error) {
+	if strings.TrimSpace(storeDir) == "" {
+		return "", fmt.Errorf("镜像存储目录不能为空")
+	}
+	img, err := pullRemoteImage(imageRef, tlsVerify)
 	if err != nil {
 		return "", err
 	}
-	return dest, nil
+	return writeImageToStore(img, strings.TrimSpace(imageRef), storeDir)
 }
 
 // PushImageFromStore 将本地镜像存储目录中的镜像推送到远程镜像仓库。

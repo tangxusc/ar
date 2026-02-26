@@ -24,28 +24,32 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	rootCommand.AddCommand(pipelineCmd)
 
 	var inputArchive string
+	var loadFromStore string
 	var loadNoCleanTmp bool
 
 	loadCmd := &cobra.Command{
 		Use:   "load",
 		Short: "加载流水线 OCI 镜像并导入子镜像",
+		Long:  "从归档文件(-i)或本地镜像存储(--from-store)加载流水线镜像：解包 rootfs、运行一次性容器，将模板与子镜像写入 pipelines-dir 并导入子镜像到 images-store-dir。",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if inputArchive == "" {
-				return fmt.Errorf("请通过 -i 指定流水线镜像归档路径")
-			}
-
 			loader := NewLoader(
 				config.PipelinesDir,
 				config.ImagesStoreDir,
 				config.LoadTmpRoot,
 				config.OciRuntimeRoot,
 			)
+			if loadFromStore != "" {
+				return loader.LoadFromStore(ctx, loadFromStore, !loadNoCleanTmp)
+			}
+			if inputArchive == "" {
+				return fmt.Errorf("请通过 -i 指定流水线镜像归档路径，或通过 --from-store 指定本地 images-store-dir 中的镜像名")
+			}
 			return loader.Load(ctx, inputArchive, !loadNoCleanTmp)
 		},
 	}
 	loadCmd.Flags().StringVarP(&inputArchive, "input", "i", "", "流水线镜像归档路径（.tar 或 .tar.gz）")
+	loadCmd.Flags().StringVar(&loadFromStore, "from-store", "", "从 --images-store-dir 中已存在的镜像名加载（与 -i 二选一）")
 	loadCmd.Flags().BoolVar(&loadNoCleanTmp, "no-clean-tmp", false, "加载完成后保留临时目录（默认会清理 /tmp 下该流水线临时文件）")
-	_ = loadCmd.MarkFlagRequired("input")
 
 	pipelineCmd.AddCommand(loadCmd)
 
@@ -181,6 +185,50 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	taskLogCmd.Flags().StringVar(&logTail, "tail", "all", "仅输出最后 N 行（默认 all，输出全部）")
 	_ = taskLogCmd.MarkFlagRequired("task")
 	taskCmd.AddCommand(taskLogCmd)
+
+	// pipeline build：根据 design/构建流水线镜像流程.md 构建流水线镜像，FROM 行为参照 docker build
+	var buildTemplatePath string
+	var buildImageTag string
+	var buildImageListPath string
+	var buildFrom string
+	var buildDockerfilePath string
+	var buildTLSVerify bool = true
+	var buildNoCleanBuildDir bool
+	buildCmd := &cobra.Command{
+		Use:   "build",
+		Short: "构建流水线镜像",
+		Long:  "根据模板与镜像列表构建流水线 OCI 镜像并保存到 --images-store-dir。Dockerfile 按设计写入构建目录 <流水线镜像名>_<时间戳>；可用 -f 指定该目录下的路径（如 Dockerfile）或外部路径以解析 FROM，否则使用 --from。",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if buildTemplatePath == "" {
+				return fmt.Errorf("请通过 -p/--template 指定流水线模板路径，例如: -p ./alpine.template.json")
+			}
+			if buildImageTag == "" {
+				return fmt.Errorf("请通过 -t/--tag 指定流水线镜像名，例如: -t pipeline-alpine:latest")
+			}
+			if buildImageListPath == "" {
+				return fmt.Errorf("请通过 -i/--images 指定镜像列表文件路径，例如: -i ./images.txt")
+			}
+			return BuildPipelineImage(
+				buildTemplatePath,
+				buildImageListPath,
+				buildImageTag,
+				buildFrom,
+				buildDockerfilePath,
+				config.LoadTmpRoot,
+				config.ImagesStoreDir,
+				buildTLSVerify,
+				!buildNoCleanBuildDir,
+			)
+		},
+	}
+	buildCmd.Flags().StringVarP(&buildTemplatePath, "template", "p", "", "流水线模板路径（*.template.json）")
+	buildCmd.Flags().StringVarP(&buildImageTag, "tag", "t", "", "流水线镜像名（如 pipeline-alpine:latest）")
+	buildCmd.Flags().StringVarP(&buildImageListPath, "images", "i", "", "镜像列表文件路径（每行一个镜像名）")
+	buildCmd.Flags().StringVarP(&buildDockerfilePath, "file", "f", "", "Dockerfile 路径（相对路径为构建目录 <流水线镜像名>_<时间戳> 内路径；未指定时使用 --from）")
+	buildCmd.Flags().StringVar(&buildFrom, "from", "alpine:latest", "基础镜像（未指定 -f 或 -f 指向文件不存在时生效；先查本地 --images-store-dir，无则拉取）")
+	buildCmd.Flags().BoolVar(&buildTLSVerify, "tls-verify", true, "拉取镜像时是否验证 TLS 证书")
+	buildCmd.Flags().BoolVar(&buildNoCleanBuildDir, "no-clean-build-dir", false, "构建完成后保留构建目录（默认会清理）")
+	pipelineCmd.AddCommand(buildCmd)
 
 	addImageCommand(rootCommand)
 	addPipelineCommand(pipelineCmd)
