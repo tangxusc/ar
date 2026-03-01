@@ -31,17 +31,21 @@ func NewRunner(arRoot, pipelinesDir, imagesStoreDir, runtimeRoot string) *Runner
 // taskID 若为空则自动生成；调用方可传入预生成的 taskID 以便与停止/恢复时注册的 cancel 对应。
 // 返回 taskID 与错误。
 func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, taskID string) (string, error) {
+	logrus.Debugf("Runner.Run: pipelineName=%s nodes=%d", pipelineName, len(nodes))
 	if len(nodes) == 0 {
+		logrus.Error("Runner.Run: 节点列表为空")
 		return "", fmt.Errorf("节点列表不能为空（请通过 -n 指定节点 JSON 文件）")
 	}
 	node := nodes[0] // 设计：多节点时可按步分配，此处简化为首节点用于全部步骤
 
 	steps, err := LoadTemplate(r.pipelinesDir, pipelineName)
 	if err != nil {
+		logrus.Errorf("Runner.Run: 加载模板失败 pipeline=%s: %v", pipelineName, err)
 		return "", err
 	}
 	ordered, err := TopoOrder(steps)
 	if err != nil {
+		logrus.Errorf("Runner.Run: 拓扑排序失败: %v", err)
 		return "", err
 	}
 
@@ -77,11 +81,13 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 		if result.Err != nil {
 			step.Status = StatusFailed
 			_ = WritePipelineJSON(runDir, runData)
+			logrus.Errorf("Runner.Run: 步骤 %s 执行失败: %v", step.Name, result.Err)
 			return taskID, fmt.Errorf("步骤 %s 执行失败: %w", step.Name, result.Err)
 		}
 		if result.ExitCode != 0 {
 			step.Status = StatusFailed
 			_ = WritePipelineJSON(runDir, runData)
+			logrus.Errorf("Runner.Run: 步骤 %s 退出码非 0: %d", step.Name, result.ExitCode)
 			return taskID, fmt.Errorf("步骤 %s 退出码非 0: %d（按设计停止后续步骤）", step.Name, result.ExitCode)
 		}
 
@@ -139,11 +145,13 @@ func (r *Runner) Resume(ctx context.Context, taskID string) error {
 		if result.Err != nil {
 			step.Status = StatusFailed
 			_ = WritePipelineJSON(runDir, runData)
+			logrus.Errorf("Runner.Resume: 步骤 %s 执行失败: %v", step.Name, result.Err)
 			return fmt.Errorf("步骤 %s 执行失败: %w", step.Name, result.Err)
 		}
 		if result.ExitCode != 0 {
 			step.Status = StatusFailed
 			_ = WritePipelineJSON(runDir, runData)
+			logrus.Errorf("Runner.Resume: 步骤 %s 退出码非 0: %d", step.Name, result.ExitCode)
 			return fmt.Errorf("步骤 %s 退出码非 0: %d（按设计停止后续步骤）", step.Name, result.ExitCode)
 		}
 

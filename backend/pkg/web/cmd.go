@@ -58,20 +58,28 @@ func AddCommand(ctx context.Context, cancelFunc func(), rootCommand *cobra.Comma
 		Use:   `start`,
 		Short: `启动web server,默认监听8080端口`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("server start: 开始执行")
 			defer func() {
 				cancelFunc()
 			}()
+			logrus.Debugf("server start: logFilePath=%s pidFilePath=%s webServerPort=%s", logFilePath, pidFilePath, webServerPort)
 			logWriter, err := initLog()
 			if err != nil {
+				logrus.Errorf("server start: 初始化日志失败: %v", err)
 				return err
 			}
 			if err := writePIDFile(pidFilePath); err != nil {
+				logrus.Errorf("server start: 写入 PID 文件失败: %v", err)
 				return err
 			}
+			logrus.Infof("server start: 启动 web server 端口 %s", webServerPort)
 			if err := Start(ctx, logWriter); err != nil {
+				logrus.Errorf("server start 失败: %v", err)
 				return err
 			}
+			logrus.Info("server start: 服务已启动，等待退出信号")
 			<-ctx.Done()
+			logrus.Info("server start: 收到退出信号，服务结束")
 			return nil
 		},
 	}
@@ -84,12 +92,20 @@ func AddCommand(ctx context.Context, cancelFunc func(), rootCommand *cobra.Comma
 		Use:   `stop`,
 		Short: `停止后端：按前缀清理 OCI 容器，并停止本地 gin server`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("server stop: 开始执行")
+			logrus.Debugf("server stop: pidFilePath=%s ociContainerRemove=%v containerPrefix=%s", pidFilePath, ociContainerRemove, containerNamePrefix)
 			if ociContainerRemove {
+				logrus.Debug("server stop: 按前缀清理 OCI 容器")
 				if err := container.StopAndRemoveOCIContainers(config.OciRuntimeRoot, containerNamePrefix); err != nil {
-					logrus.Warnf("按前缀清理 OCI 容器时出错（可忽略）: %v", err)
+					logrus.Warnf("server stop: 按前缀清理 OCI 容器时出错（可忽略）: %v", err)
 				}
 			}
-			return stopBackendProcess(pidFilePath)
+			if err := stopBackendProcess(pidFilePath); err != nil {
+				logrus.Errorf("server stop 失败: %v", err)
+				return err
+			}
+			logrus.Info("server stop: 完成")
+			return nil
 		},
 	}
 	stopCmd.PersistentFlags().StringVar(&containerNamePrefix, "container-prefix", "ar_", "要移除的 OCI 容器 ID 前缀")

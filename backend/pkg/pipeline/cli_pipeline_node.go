@@ -23,17 +23,22 @@ func addPipelineCommand(pipelineCmd *cobra.Command) {
 		Aliases: []string{"ls"},
 		Short:   "列出已存在的流水线模板",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline list: 开始执行")
+			logrus.Debugf("pipeline list: pipelinesDir=%s", config.PipelinesDir)
 			names, err := listPipelineNames(config.PipelinesDir)
 			if err != nil {
+				logrus.Errorf("pipeline list 失败: %v", err)
 				return err
 			}
 			if len(names) == 0 {
-				logrus.Info("当前无任何流水线模板")
+				logrus.Info("pipeline list: 当前无任何流水线模板")
 				return nil
 			}
+			logrus.Debugf("pipeline list: 共 %d 个模板", len(names))
 			for _, name := range names {
 				fmt.Println(name)
 			}
+			logrus.Info("pipeline list: 完成")
 			return nil
 		},
 	}
@@ -45,15 +50,20 @@ func addPipelineCommand(pipelineCmd *cobra.Command) {
 		Short:   "删除一个或多个流水线模板",
 		Long:    "流水线名为模板前缀（不含 .template.json 后缀），可一次指定多个。例如: ar pipeline rm demo1 demo2",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline rm: 开始执行")
 			if len(args) == 0 {
+				logrus.Error("pipeline rm: 未指定流水线名")
 				return fmt.Errorf("请指定要删除的流水线名，例如: ar pipeline rm <name>")
 			}
+			logrus.Debugf("pipeline rm: 待删除 %d 个: %v", len(args), args)
 			for _, name := range args {
 				if err := deletePipelineByName(config.PipelinesDir, name); err != nil {
+					logrus.Errorf("pipeline rm 删除 %s 失败: %v", name, err)
 					return err
 				}
-				logrus.Infof("已删除流水线模板: %s", name)
+				logrus.Infof("pipeline rm: 已删除 %s", name)
 			}
+			logrus.Info("pipeline rm: 完成")
 			return nil
 		},
 	}
@@ -146,14 +156,18 @@ func addNodeCommand(rootCommand *cobra.Command) {
 		Aliases: []string{"ls"},
 		Short:   "列出已注册的执行节点",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("node list: 开始执行")
+			logrus.Debugf("node list: nodesDir=%s", config.NodesDir)
 			nodes, err := loadAllCliNodes()
 			if err != nil {
+				logrus.Errorf("node list 失败: %v", err)
 				return err
 			}
 			if len(nodes) == 0 {
-				logrus.Info("当前无已注册节点")
+				logrus.Info("node list: 当前无已注册节点")
 				return nil
 			}
+			logrus.Debugf("node list: 共 %d 个节点", len(nodes))
 			for _, n := range nodes {
 				labelParts := make([]string, 0, len(n.Labels))
 				for _, l := range n.Labels {
@@ -162,6 +176,7 @@ func addNodeCommand(rootCommand *cobra.Command) {
 				labels := strings.Join(labelParts, ",")
 				fmt.Printf("%s\t%s\t%s\t%s\n", n.IP, n.Port, n.Username, labels)
 			}
+			logrus.Info("node list: 完成")
 			return nil
 		},
 	}
@@ -173,15 +188,20 @@ func addNodeCommand(rootCommand *cobra.Command) {
 		Short:   "删除一个或多个执行节点",
 		Long:    "根据节点 IP 删除对应的节点文件 node_<ip>.json，可一次指定多个 IP。例如: ar node rm 10.0.0.1 10.0.0.2",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("node rm: 开始执行")
 			if len(args) == 0 {
+				logrus.Error("node rm: 未指定节点 IP")
 				return fmt.Errorf("请指定要删除的节点 IP，例如: ar node rm <ip>")
 			}
+			logrus.Debugf("node rm: 待删除 %d 个节点: %v", len(args), args)
 			for _, ip := range args {
 				if err := deleteNodeByIP(ip); err != nil {
+					logrus.Errorf("node rm 删除 %s 失败: %v", ip, err)
 					return err
 				}
-				logrus.Infof("已删除节点: %s", ip)
+				logrus.Infof("node rm: 已删除节点 %s", ip)
 			}
+			logrus.Info("node rm: 完成")
 			return nil
 		},
 	}

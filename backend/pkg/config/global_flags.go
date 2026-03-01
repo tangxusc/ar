@@ -13,7 +13,7 @@ var LoadTmpRoot string = "/tmp"
 var NodesDir string = "/var/lib/ar/nodes"
 
 func InitGlobalFlags(command *cobra.Command) {
-	command.PersistentFlags().BoolVar(&Debug, "debug", true, "enable debug")
+	command.PersistentFlags().BoolVar(&Debug, "debug", false, "enable debug logging")
 	command.PersistentFlags().StringVar(&OciRuntimeRoot, "oci-runtime-root", "/var/lib/ar/runc", "OCI runtime state root directory")
 	command.PersistentFlags().StringVar(&PipelinesDir, "pipelines-dir", "/var/lib/ar/pipelines", "directory used to store pipeline templates")
 	command.PersistentFlags().StringVar(&ImagesStoreDir, "images-store-dir", "/var/lib/ar/images", "directory used to store loaded OCI images")

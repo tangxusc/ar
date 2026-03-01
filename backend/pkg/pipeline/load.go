@@ -47,13 +47,16 @@ func NewLoader(pipelinesDir, imagesStoreDir, tmpRoot, runtimeRoot string) *Loade
 }
 
 func (l *Loader) Load(ctx context.Context, archivePath string, cleanTmp bool) error {
+	logrus.Debugf("Loader.Load: archivePath=%s cleanTmp=%v", archivePath, cleanTmp)
 	archiveAbs, err := filepath.Abs(archivePath)
 	if err != nil {
+		logrus.Errorf("Loader.Load: 解析镜像路径失败: %v", err)
 		return fmt.Errorf("解析镜像路径失败: %w", err)
 	}
 
 	pipelineImage, imageRef, err := loadImageFromArchive(archiveAbs)
 	if err != nil {
+		logrus.Errorf("Loader.Load: 加载流水线镜像失败: %v", err)
 		return fmt.Errorf("加载流水线镜像失败: %w", err)
 	}
 
@@ -96,6 +99,7 @@ func (l *Loader) Load(ctx context.Context, archivePath string, cleanTmp bool) er
 	var out bytes.Buffer
 	if err := runOneShotContainer(ctx, l.runtimeRoot, bundleDir, containerID, &out, &out); err != nil {
 		// 将容器输出附加到错误日志，便于排查加载失败原因。
+		logrus.Errorf("Loader.Load: 一次性容器执行失败 containerID=%s: %v, output: %s", containerID, err, strings.TrimSpace(out.String()))
 		return fmt.Errorf("%w, output: %s", err, strings.TrimSpace(out.String()))
 	}
 

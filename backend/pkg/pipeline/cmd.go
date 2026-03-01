@@ -32,6 +32,9 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 		Short: "加载流水线 OCI 镜像并导入子镜像",
 		Long:  "从归档文件(-i)或本地镜像存储(--from-store)加载流水线镜像：解包 rootfs、运行一次性容器，将模板与子镜像写入 pipelines-dir 并导入子镜像到 images-store-dir。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline load: 开始执行")
+			logrus.Debugf("pipeline load: pipelinesDir=%s imagesStoreDir=%s loadTmpRoot=%s fromStore=%s input=%s noCleanTmp=%v",
+				config.PipelinesDir, config.ImagesStoreDir, config.LoadTmpRoot, loadFromStore, inputArchive, loadNoCleanTmp)
 			loader := NewLoader(
 				config.PipelinesDir,
 				config.ImagesStoreDir,
@@ -39,12 +42,25 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 				config.OciRuntimeRoot,
 			)
 			if loadFromStore != "" {
-				return loader.LoadFromStore(ctx, loadFromStore, !loadNoCleanTmp)
+				logrus.Infof("pipeline load: 从本地镜像存储加载: %s", loadFromStore)
+				if err := loader.LoadFromStore(ctx, loadFromStore, !loadNoCleanTmp); err != nil {
+					logrus.Errorf("pipeline load 失败 (from-store): %v", err)
+					return err
+				}
+				logrus.Info("pipeline load: 完成（来自本地存储）")
+				return nil
 			}
 			if inputArchive == "" {
+				logrus.Error("pipeline load: 未指定 -i 或 --from-store")
 				return fmt.Errorf("请通过 -i 指定流水线镜像归档路径，或通过 --from-store 指定本地 images-store-dir 中的镜像名")
 			}
-			return loader.Load(ctx, inputArchive, !loadNoCleanTmp)
+			logrus.Infof("pipeline load: 从归档加载: %s", inputArchive)
+			if err := loader.Load(ctx, inputArchive, !loadNoCleanTmp); err != nil {
+				logrus.Errorf("pipeline load 失败: %v", err)
+				return err
+			}
+			logrus.Info("pipeline load: 完成")
+			return nil
 		},
 	}
 	loadCmd.Flags().StringVarP(&inputArchive, "input", "i", "", "流水线镜像归档路径（.tar 或 .tar.gz）")
@@ -60,26 +76,35 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 		Short: "执行流水线（按 DAG 顺序运行 OCI 容器）",
 		Long:  "读取 pipeline_name.template.json，根据节点列表渲染并按拓扑序执行各步骤；使用 OCI Runtime（libcontainer）运行容器，挂载 /tasks 与 /current-task。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline run: 开始执行")
 			if runPipelineName == "" {
+				logrus.Error("pipeline run: 未指定 -p 流水线名称")
 				return fmt.Errorf("请通过 -p 指定流水线名称（与 .template.json 前缀一致）")
 			}
 			if runNodesPath == "" {
+				logrus.Error("pipeline run: 未指定 -n 节点列表路径")
 				return fmt.Errorf("请通过 -n 指定节点列表 JSON 文件路径")
 			}
+			logrus.Debugf("pipeline run: pipeline=%s nodes=%s", runPipelineName, runNodesPath)
 			data, err := os.ReadFile(runNodesPath)
 			if err != nil {
+				logrus.Errorf("pipeline run: 读取节点文件失败 %s: %v", runNodesPath, err)
 				return fmt.Errorf("读取节点文件失败 %s: %w", runNodesPath, err)
 			}
 			nodes, err := ParseNodesFile(data)
 			if err != nil {
+				logrus.Errorf("pipeline run: 解析节点 JSON 失败: %v", err)
 				return fmt.Errorf("解析节点 JSON 失败: %w", err)
 			}
+			logrus.Debugf("pipeline run: 解析到 %d 个节点", len(nodes))
 			arRoot := filepath.Dir(config.PipelinesDir)
 			runner := NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
 			taskID, err := runner.Run(ctx, runPipelineName, nodes, "")
 			if err != nil {
+				logrus.Errorf("pipeline run 失败: %v", err)
 				return err
 			}
+			logrus.Infof("pipeline run: 完成 taskId=%s", taskID)
 			fmt.Println("taskId:", taskID)
 			return nil
 		},
@@ -110,8 +135,15 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 		Aliases: []string{"ls"},
 		Short:   "列出正在运行的流水线及其正在运行的容器",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline task list: 开始执行")
+			logrus.Debugf("pipeline task list: filter pipeline=%s", listPipelineName)
 			arRoot := filepath.Dir(config.PipelinesDir)
-			return listRunningTasks(arRoot, listPipelineName)
+			if err := listRunningTasks(arRoot, listPipelineName); err != nil {
+				logrus.Errorf("pipeline task list 失败: %v", err)
+				return err
+			}
+			logrus.Info("pipeline task list: 完成")
+			return nil
 		},
 	}
 	taskListCmd.Flags().StringVarP(&listPipelineName, "pipeline", "p", "", "按流水线名称过滤，仅展示指定流水线的运行任务")
@@ -123,11 +155,19 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 		Short: "停止指定流水线任务（按 taskId）",
 		Long:  "根据 taskId 查找对应流水线运行目录，停止正在运行的容器并将 pending/running 步骤状态标记为 cancelled，写回 pipeline.json（参照 design/停止流水线流程.md）。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline task stop: 开始执行")
 			if stopTaskID == "" {
+				logrus.Error("pipeline task stop: 未指定 -t taskId")
 				return fmt.Errorf("请通过 -t 指定要停止的流水线任务 ID（taskId）")
 			}
+			logrus.Debugf("pipeline task stop: taskId=%s", stopTaskID)
 			arRoot := filepath.Dir(config.PipelinesDir)
-			return stopPipelineTask(arRoot, config.OciRuntimeRoot, stopTaskID)
+			if err := stopPipelineTask(arRoot, config.OciRuntimeRoot, stopTaskID); err != nil {
+				logrus.Errorf("pipeline task stop 失败: %v", err)
+				return err
+			}
+			logrus.Infof("pipeline task stop: 完成 taskId=%s", stopTaskID)
+			return nil
 		},
 	}
 	taskStopCmd.Flags().StringVarP(&stopTaskID, "task", "t", "", "要停止的流水线任务 ID（必填）")
@@ -140,15 +180,19 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 		Short: "恢复被取消的流水线任务（按 taskId）",
 		Long:  "根据 taskId 查找对应流水线运行目录，读取 pipeline.json，确定上次执行到的步骤并从该步骤开始继续执行（参照 design/恢复流水线执行.md）。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline task resume: 开始执行")
 			if resumeTaskID == "" {
+				logrus.Error("pipeline task resume: 未指定 -t taskId")
 				return fmt.Errorf("请通过 -t 指定要恢复的流水线任务 ID（taskId）")
 			}
+			logrus.Debugf("pipeline task resume: taskId=%s", resumeTaskID)
 			arRoot := filepath.Dir(config.PipelinesDir)
 			runner := NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
 			if err := runner.Resume(ctx, resumeTaskID); err != nil {
+				logrus.Errorf("pipeline task resume 失败: %v", err)
 				return err
 			}
-			logrus.Infof("流水线任务已恢复执行: taskId=%s", resumeTaskID)
+			logrus.Infof("pipeline task resume: 完成 taskId=%s", resumeTaskID)
 			return nil
 		},
 	}
@@ -162,7 +206,9 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 		Short: "查看指定流水线任务中某容器的日志",
 		Long:  "根据 taskId 查找对应流水线运行目录，从 logs 目录中读取容器的 stdout/stderr 日志文件并输出，支持 --follow 与 --tail（参照 docker logs 与 design/执行流水线流程.md）。未指定 --container 时会输出该任务下所有步骤容器的日志。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline task log: 开始执行")
 			if logTaskID == "" {
+				logrus.Error("pipeline task log: 未指定 -t taskId")
 				return fmt.Errorf("请通过 -t 指定流水线任务 ID（taskId）")
 			}
 
@@ -170,13 +216,20 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 			if strings.ToLower(strings.TrimSpace(logTail)) != "" && strings.ToLower(strings.TrimSpace(logTail)) != "all" {
 				n, err := strconv.Atoi(logTail)
 				if err != nil || n < 0 {
+					logrus.Errorf("pipeline task log: 无效的 --tail 值: %s", logTail)
 					return fmt.Errorf("无效的 --tail 值: %s（应为非负整数或 all）", logTail)
 				}
 				tailLines = n
 			}
+			logrus.Debugf("pipeline task log: taskId=%s container=%s follow=%v tail=%d", logTaskID, logContainerID, logFollow, tailLines)
 
 			arRoot := filepath.Dir(config.PipelinesDir)
-			return showTaskContainerLogs(arRoot, logTaskID, logContainerID, logFollow, tailLines)
+			if err := showTaskContainerLogs(arRoot, logTaskID, logContainerID, logFollow, tailLines); err != nil {
+				logrus.Errorf("pipeline task log 失败: %v", err)
+				return err
+			}
+			logrus.Info("pipeline task log: 完成")
+			return nil
 		},
 	}
 	taskLogCmd.Flags().StringVarP(&logTaskID, "task", "t", "", "流水线任务 ID（必填）")
@@ -199,16 +252,22 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 		Short: "构建流水线镜像",
 		Long:  "根据模板与镜像列表构建流水线 OCI 镜像并保存到 --images-store-dir。Dockerfile 按设计写入构建目录 <流水线镜像名>_<时间戳>；可用 -f 指定该目录下的路径（如 Dockerfile）或外部路径以解析 FROM，否则使用 --from。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("pipeline build: 开始执行")
 			if buildTemplatePath == "" {
+				logrus.Error("pipeline build: 未指定 -p/--template")
 				return fmt.Errorf("请通过 -p/--template 指定流水线模板路径，例如: -p ./alpine.template.json")
 			}
 			if buildImageTag == "" {
+				logrus.Error("pipeline build: 未指定 -t/--tag")
 				return fmt.Errorf("请通过 -t/--tag 指定流水线镜像名，例如: -t pipeline-alpine:latest")
 			}
 			if buildImageListPath == "" {
+				logrus.Error("pipeline build: 未指定 -i/--images")
 				return fmt.Errorf("请通过 -i/--images 指定镜像列表文件路径，例如: -i ./images.txt")
 			}
-			return BuildPipelineImage(
+			logrus.Debugf("pipeline build: template=%s tag=%s images=%s from=%s file=%s tlsVerify=%v",
+				buildTemplatePath, buildImageTag, buildImageListPath, buildFrom, buildDockerfilePath, buildTLSVerify)
+			if err := BuildPipelineImage(
 				buildTemplatePath,
 				buildImageListPath,
 				buildImageTag,
@@ -218,7 +277,12 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 				config.ImagesStoreDir,
 				buildTLSVerify,
 				!buildNoCleanBuildDir,
-			)
+			); err != nil {
+				logrus.Errorf("pipeline build 失败: %v", err)
+				return err
+			}
+			logrus.Infof("pipeline build: 完成 tag=%s", buildImageTag)
+			return nil
 		},
 	}
 	buildCmd.Flags().StringVarP(&buildTemplatePath, "template", "p", "", "流水线模板路径（*.template.json）")
@@ -522,31 +586,38 @@ func addImageCommand(rootCommand *cobra.Command) {
 		Long:  "参照 docker login，用于保存指定镜像仓库的用户名和密码，凭证会写入 /var/lib/ar/auth.json，仅在本机生效。账号密码是否真正有效，将在后续 image pull 时由 registry 校验。",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("image login: 开始执行")
 			registry := strings.TrimSpace(args[0])
 			if registry == "" {
+				logrus.Error("image login: registry 为空")
 				return fmt.Errorf("registry 不能为空，例如: registry.cn-shanghai.aliyuncs.com")
 			}
 
 			if loginPasswordStdin && loginPassword != "" {
+				logrus.Error("image login: --password 与 --password-stdin 不能同时使用")
 				return fmt.Errorf("--password 与 --password-stdin 不能同时使用")
 			}
 
 			if loginPasswordStdin {
 				data, err := io.ReadAll(os.Stdin)
 				if err != nil {
+					logrus.Errorf("image login: 从标准输入读取密码失败: %v", err)
 					return fmt.Errorf("从标准输入读取密码失败: %w", err)
 				}
 				loginPassword = strings.TrimRight(string(data), "\r\n")
 			}
 
 			if strings.TrimSpace(loginUsername) == "" {
+				logrus.Error("image login: 未指定用户名")
 				return fmt.Errorf("请通过 -u/--username 指定用户名")
 			}
 
+			logrus.Debugf("image login: registry=%s username=%s", registry, loginUsername)
 			if err := SaveRegistryAuth(registry, loginUsername, loginPassword); err != nil {
+				logrus.Errorf("image login 失败: %v", err)
 				return err
 			}
-			logrus.Infof("已保存镜像仓库登录信息(凭证将于后续 image pull 时由 registry 校验): registry=%s", registry)
+			logrus.Infof("image login: 完成 registry=%s", registry)
 			return nil
 		},
 	}
@@ -564,15 +635,19 @@ func addImageCommand(rootCommand *cobra.Command) {
 		Long:  "从远程镜像仓库拉取镜像，并以 OCI layout 形式写入 --images-store-dir 指定的目录下，目录名为经过 sanitize 处理后的镜像名称。",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("image pull: 开始执行")
 			imageRef := strings.TrimSpace(args[0])
 			if imageRef == "" {
+				logrus.Error("image pull: 镜像引用为空")
 				return fmt.Errorf("镜像引用不能为空，例如: ar image pull registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0")
 			}
+			logrus.Debugf("image pull: image=%s imagesStoreDir=%s tlsVerify=%v", imageRef, config.ImagesStoreDir, pullTLSVerify)
 			dest, err := PullImageToStore(imageRef, config.ImagesStoreDir, pullTLSVerify)
 			if err != nil {
+				logrus.Errorf("image pull 失败: %v", err)
 				return err
 			}
-			logrus.Infof("镜像已拉取到本地: %s", dest)
+			logrus.Infof("image pull: 完成 dest=%s", dest)
 			return nil
 		},
 	}
@@ -589,15 +664,19 @@ func addImageCommand(rootCommand *cobra.Command) {
 		Long:  "从 --images-store-dir 打开的 OCI layout 镜像推送到远程镜像仓库。IMAGE 可以是本地镜像存储目录名或原始镜像引用名，默认使用镜像记录的原始引用名作为推送目标，可通过 --target 覆盖。",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("image push: 开始执行")
 			imageNameOrRef := strings.TrimSpace(args[0])
 			if imageNameOrRef == "" {
+				logrus.Error("image push: 镜像名称或引用为空")
 				return fmt.Errorf("镜像名称或引用不能为空，例如: ar image push alpine-3_18_0 或 ar image push registry.cn-shanghai.aliyuncs.com/tangxusc/alpine:3.18.0")
 			}
+			logrus.Debugf("image push: image=%s target=%s tlsVerify=%v", imageNameOrRef, pushTargetRef, pushTLSVerify)
 			pushedRef, err := PushImageFromStore(imageNameOrRef, config.ImagesStoreDir, pushTargetRef, pushTLSVerify)
 			if err != nil {
+				logrus.Errorf("image push 失败: %v", err)
 				return err
 			}
-			logrus.Infof("镜像已推送到远程仓库: %s", pushedRef)
+			logrus.Infof("image push: 完成 pushedRef=%s", pushedRef)
 			return nil
 		},
 	}
@@ -612,23 +691,29 @@ func addImageCommand(rootCommand *cobra.Command) {
 		Long:  "参照 docker tag：将 SOURCE_IMAGE 在本地镜像存储中另存为 TARGET_IMAGE。SOURCE_IMAGE 可为 list 输出的存储目录名或原始引用名；TARGET_IMAGE 为新的镜像引用名（如 myregistry.com/foo/bar:tag），存储目录名将按其自动生成。",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("image tag: 开始执行")
 			sourceRef := strings.TrimSpace(args[0])
 			targetRef := strings.TrimSpace(args[1])
 			if sourceRef == "" {
+				logrus.Error("image tag: SOURCE_IMAGE 为空")
 				return fmt.Errorf("SOURCE_IMAGE 不能为空，例如: allrun image tag alpine-3_18_0 myreg.io/my/alpine:v1")
 			}
 			if targetRef == "" {
+				logrus.Error("image tag: TARGET_IMAGE 为空")
 				return fmt.Errorf("TARGET_IMAGE 不能为空，例如: allrun image tag alpine-3_18_0 myreg.io/my/alpine:v1")
 			}
+			logrus.Debugf("image tag: source=%s target=%s", sourceRef, targetRef)
 			img, err := OpenImageFromStore(config.ImagesStoreDir, sourceRef)
 			if err != nil {
+				logrus.Errorf("image tag 打开源镜像失败: %v", err)
 				return err
 			}
 			dest, err := writeImageToStore(img, targetRef, config.ImagesStoreDir)
 			if err != nil {
+				logrus.Errorf("image tag 写入目标失败: %v", err)
 				return err
 			}
-			logrus.Infof("已为镜像打标签: %s -> %s（存储目录: %s）", sourceRef, targetRef, dest)
+			logrus.Infof("image tag: 完成 %s -> %s (dir=%s)", sourceRef, targetRef, dest)
 			return nil
 		},
 	}
@@ -640,17 +725,22 @@ func addImageCommand(rootCommand *cobra.Command) {
 		Aliases: []string{"ls"},
 		Short:   "列出已导入的镜像",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("image list: 开始执行")
+			logrus.Debugf("image list: imagesStoreDir=%s", config.ImagesStoreDir)
 			list, err := ListImages(config.ImagesStoreDir)
 			if err != nil {
+				logrus.Errorf("image list 失败: %v", err)
 				return err
 			}
 			if len(list) == 0 {
-				logrus.Info("当前无已导入镜像")
+				logrus.Info("image list: 当前无已导入镜像")
 				return nil
 			}
+			logrus.Debugf("image list: 共 %d 个镜像", len(list))
 			for _, e := range list {
 				fmt.Printf("%s\t%s\n", e.Name, e.Ref)
 			}
+			logrus.Info("image list: 完成")
 			return nil
 		},
 	}
@@ -662,15 +752,20 @@ func addImageCommand(rootCommand *cobra.Command) {
 		Short: "删除一个或多个已导入的镜像",
 		Long:  "镜像名为存储目录名（与 list 输出第一列一致），可指定多个。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("image rm: 开始执行")
 			if len(args) == 0 {
+				logrus.Error("image rm: 未指定镜像名")
 				return fmt.Errorf("请指定要删除的镜像名，例如: ar image rm <name>")
 			}
+			logrus.Debugf("image rm: 待删除 %d 个镜像: %v", len(args), args)
 			for _, name := range args {
 				if err := DeleteImage(config.ImagesStoreDir, name); err != nil {
+					logrus.Errorf("image rm 删除 %s 失败: %v", name, err)
 					return err
 				}
-				logrus.Infof("已删除镜像: %s", name)
+				logrus.Infof("image rm: 已删除 %s", name)
 			}
+			logrus.Info("image rm: 完成")
 			return nil
 		},
 	}
@@ -683,25 +778,29 @@ func addImageCommand(rootCommand *cobra.Command) {
 		Short: "清理未使用的镜像",
 		Long:  "删除未被任何流水线模板（*.template.json）引用的镜像。使用 --all 时删除全部已导入镜像。",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			logrus.Info("image prune: 开始执行")
+			logrus.Debugf("image prune: all=%v imagesStoreDir=%s pipelinesDir=%s", pruneAll, config.ImagesStoreDir, config.PipelinesDir)
 			if pruneAll {
 				pruned, err := PruneAllImages(config.ImagesStoreDir)
 				if err != nil {
+					logrus.Errorf("image prune --all 失败: %v", err)
 					return err
 				}
 				for _, name := range pruned {
-					logrus.Infof("已删除镜像: %s", name)
+					logrus.Debugf("image prune: 已删除 %s", name)
 				}
-				logrus.Infof("共删除 %d 个镜像", len(pruned))
+				logrus.Infof("image prune: 完成，共删除 %d 个镜像", len(pruned))
 				return nil
 			}
 			pruned, err := PruneImages(config.ImagesStoreDir, config.PipelinesDir)
 			if err != nil {
+				logrus.Errorf("image prune 失败: %v", err)
 				return err
 			}
 			for _, name := range pruned {
-				logrus.Infof("已删除未引用镜像: %s", name)
+				logrus.Debugf("image prune: 已删除未引用镜像 %s", name)
 			}
-			logrus.Infof("共删除 %d 个未引用镜像", len(pruned))
+			logrus.Infof("image prune: 完成，共删除 %d 个未引用镜像", len(pruned))
 			return nil
 		},
 	}

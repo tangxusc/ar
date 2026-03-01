@@ -86,6 +86,9 @@ func BuildPipelineImage(templatePath, imageListPath, pipelineImageTag, fromImage
 		fromImage = "alpine:latest"
 	}
 
+	logrus.Infof("BuildPipelineImage: 开始构建 template=%s tag=%s", templatePath, pipelineImageTag)
+	logrus.Debugf("BuildPipelineImage: from=%s dockerfilePath=%s tmpRoot=%s imagesStoreDir=%s", fromImage, dockerfilePath, tmpRoot, imagesStoreDir)
+
 	// 1. 校验模板文件存在
 	templateAbs, err := filepath.Abs(templatePath)
 	if err != nil {
