@@ -1,0 +1,14 @@
+{
+  "name": "05-chrony-sync",
+  "image": "ubuntu:latest",
+  "entrypoint": "/bin/bash",
+  "args": ["-c", "ssh -o StrictHostKeyChecking=no ${target_username:+${target_username}@}${target_host} 'which chronyd chrony 2>/dev/null && (cat > /etc/chrony.conf << EOF\npool 192.168.1.31 iburst\ndriftfile /var/lib/chrony/drift\nmakestep 1.0 3\nrtcsync\nkeyfile /etc/chrony.keys\nleapsectz right/UTC\nlogdir /var/log/chrony\nEOF\nsystemctl restart chronyd; systemctl enable chronyd) || true'"],
+  "env": [
+    "target_host={{node_ip}}",
+    "target_port={{node_port}}",
+    "target_username={{node_username}}",
+    "target_password={{node_password}}",
+    "target_labels={{node_labels}}"
+  ],
+  "nodes": ["06-ulimit"]
+}

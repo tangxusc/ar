@@ -1,0 +1,14 @@
+{
+  "name": "01-disable-firewall",
+  "image": "ubuntu:latest",
+  "entrypoint": "/bin/bash",
+  "args": ["-c", "ssh -o StrictHostKeyChecking=no ${target_username:+${target_username}@}${target_host} 'systemctl disable --now firewalld 2>/dev/null || true'"],
+  "env": [
+    "target_host={{node_ip}}",
+    "target_port={{node_port}}",
+    "target_username={{node_username}}",
+    "target_password={{node_password}}",
+    "target_labels={{node_labels}}"
+  ],
+  "nodes": ["02-disable-selinux"]
+}

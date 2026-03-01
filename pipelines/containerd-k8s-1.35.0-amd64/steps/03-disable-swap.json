@@ -1,0 +1,14 @@
+{
+  "name": "03-disable-swap",
+  "image": "ubuntu:latest",
+  "entrypoint": "/bin/bash",
+  "args": ["-c", "ssh -o StrictHostKeyChecking=no ${target_username:+${target_username}@}${target_host} 'sed -ri \"s/.*swap.*/#&/\" /etc/fstab; swapoff -a; sysctl -w vm.swappiness=0'"],
+  "env": [
+    "target_host={{node_ip}}",
+    "target_port={{node_port}}",
+    "target_username={{node_username}}",
+    "target_password={{node_password}}",
+    "target_labels={{node_labels}}"
+  ],
+  "nodes": ["04-network-config"]
+}
