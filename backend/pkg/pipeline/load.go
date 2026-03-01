@@ -86,7 +86,7 @@ func (l *Loader) Load(ctx context.Context, archivePath string, cleanTmp bool) er
 	}
 
 	logrus.Infof("开始生成 OCI runtime spec: %s/config.json", bundleDir)
-	if err := writeRuntimeSpec(bundleDir, pipelineImage, l.pipelinesDir, runtimeImagesDir); err != nil {
+	if err := writeRuntimeSpec(bundleDir, pipelineImage, l.pipelinesDir, runtimeImagesDir, l.imagesStoreDir); err != nil {
 		return fmt.Errorf("生成 OCI 运行时配置失败: %w", err)
 	}
 
@@ -153,7 +153,7 @@ func (l *Loader) LoadFromStore(ctx context.Context, imageNameOrRef string, clean
 	}
 
 	logrus.Infof("开始生成 OCI runtime spec: %s/config.json", bundleDir)
-	if err := writeRuntimeSpec(bundleDir, pipelineImage, l.pipelinesDir, runtimeImagesDir); err != nil {
+	if err := writeRuntimeSpec(bundleDir, pipelineImage, l.pipelinesDir, runtimeImagesDir, l.imagesStoreDir); err != nil {
 		return fmt.Errorf("生成 OCI 运行时配置失败: %w", err)
 	}
 
@@ -416,7 +416,7 @@ func toLibcontainerProcess(processSpec *specs.Process, stdout, stderr io.Writer)
 	return p, nil
 }
 
-func writeRuntimeSpec(bundleDir string, image v1.Image, pipelinesDir, runtimeImagesDir string) error {
+func writeRuntimeSpec(bundleDir string, image v1.Image, pipelinesDir, runtimeImagesDir, imagesStoreDir string) error {
 	if err := os.MkdirAll(bundleDir, 0755); err != nil {
 		return fmt.Errorf("创建 bundle 目录失败: %w", err)
 	}
@@ -514,6 +514,12 @@ func writeRuntimeSpec(bundleDir string, image v1.Image, pipelinesDir, runtimeIma
 				Destination: "/images",
 				Type:        "bind",
 				Source:      runtimeImagesDir,
+				Options:     []string{"rbind", "rw"},
+			},
+			{
+				Destination: "/images-store",
+				Type:        "bind",
+				Source:      imagesStoreDir,
 				Options:     []string{"rbind", "rw"},
 			},
 		},

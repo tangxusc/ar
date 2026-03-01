@@ -58,7 +58,7 @@ func parseFromInDockerfile(path string) (string, error) {
 // BuildPipelineImage 根据设计文档构建流水线镜像（不依赖 Docker，使用 go-containerregistry）：
 // 1. 校验 templatePath、imageListPath 存在
 // 2. 在 tmpRoot 下创建临时目录 <流水线镜像名>_<时间戳>，结束后按 cleanBuildDir 决定是否删除
-// 3. 拉取镜像列表中的镜像到临时目录 images-store
+// 3. 拉取镜像列表中的镜像到临时目录 images-raw
 // 4. 使用 base 镜像（FROM 指令：优先从 dockerfilePath 解析，否则用 fromImage），追加层并写入 imagesStoreDir
 func BuildPipelineImage(templatePath, imageListPath, pipelineImageTag, fromImage, dockerfilePath, tmpRoot, imagesStoreDir string, tlsVerify bool, cleanBuildDir bool) error {
 	templatePath = strings.TrimSpace(templatePath)
@@ -139,12 +139,12 @@ func BuildPipelineImage(templatePath, imageListPath, pipelineImageTag, fromImage
 		}
 	}()
 
-	imagesStoreInBuild := filepath.Join(tmpDir, "images-store")
+	imagesStoreInBuild := filepath.Join(tmpDir, "images-raw")
 	if err := os.MkdirAll(imagesStoreInBuild, 0755); err != nil {
-		return fmt.Errorf("创建 images-store 目录失败: %w", err)
+		return fmt.Errorf("创建 images-raw 目录失败: %w", err)
 	}
 
-	// 4. 读取镜像列表并拉取到临时 images-store
+	// 4. 读取镜像列表并拉取到临时 images-raw
 	f, err := os.Open(imageListAbs)
 	if err != nil {
 		return fmt.Errorf("打开镜像列表文件失败: %w", err)
@@ -183,7 +183,7 @@ func BuildPipelineImage(templatePath, imageListPath, pipelineImageTag, fromImage
 
 COPY entrypoint.sh /entrypoint.sh
 COPY %s /%s
-COPY ./images-store/* /images-store/
+COPY ./images-raw/* /images-raw/
 
 ENTRYPOINT ["/entrypoint.sh"]
 `, fromImage, templateBase, templateBase)
@@ -225,7 +225,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 	// 7. 写入 entrypoint.sh（设计文档步骤 7）
 	entrypointBody := `#!/bin/sh
 cp /*.json /pipelines/
-cp -r ./images-store/* /images-store/ 2>/dev/null || true
+cp -r ./images-raw/* /images-store/ 2>/dev/null || true
 `
 	if err := os.WriteFile(filepath.Join(tmpDir, "entrypoint.sh"), []byte(entrypointBody), 0755); err != nil {
 		return fmt.Errorf("写入 entrypoint.sh 失败: %w", err)
@@ -248,7 +248,7 @@ cp -r ./images-store/* /images-store/ 2>/dev/null || true
 		logrus.Infof("使用本地 base 镜像: %s", fromImage)
 	}
 
-	// 9. 构建包含 entrypoint.sh、模板、images-store 的 tar 层（OCI 层路径无前导 /）
+	// 9. 构建包含 entrypoint.sh、模板、images-raw 的 tar 层（OCI 层路径无前导 /）
 	layer, err := buildPipelineLayer(entrypointBody, templateBase, templateData, imagesStoreInBuild)
 	if err != nil {
 		return fmt.Errorf("构建镜像层失败: %w", err)
@@ -281,7 +281,7 @@ cp -r ./images-store/* /images-store/ 2>/dev/null || true
 	return nil
 }
 
-// buildPipelineLayer 生成包含 entrypoint.sh、模板文件、images-store 目录的 OCI 层（tar 流）。
+// buildPipelineLayer 生成包含 entrypoint.sh、模板文件、images-raw 目录的 OCI 层（tar 流）。
 // 路径为根相对且无前导 /，符合 OCI 层规范。
 func buildPipelineLayer(entrypointBody, templateBase string, templateData []byte, imagesStoreDir string) (v1.Layer, error) {
 	pr, pw := io.Pipe()
@@ -301,8 +301,8 @@ func buildPipelineLayer(entrypointBody, templateBase string, templateData []byte
 			_ = pw.CloseWithError(err)
 			return
 		}
-		// images-store 目录下所有内容，路径前缀为 images-store/
-		if err := writeTarDir(tw, imagesStoreDir, "images-store", now); err != nil {
+		// images-raw 目录下所有内容，路径前缀为 images-raw/
+		if err := writeTarDir(tw, imagesStoreDir, "images-raw", now); err != nil {
 			_ = pw.CloseWithError(err)
 			return
 		}
