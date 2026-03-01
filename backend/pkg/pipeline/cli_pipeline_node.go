@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/tabwriter"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -25,19 +27,30 @@ func addPipelineCommand(pipelineCmd *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logrus.Info("pipeline list: 开始执行")
 			logrus.Debugf("pipeline list: pipelinesDir=%s", config.PipelinesDir)
-			names, err := listPipelineNames(config.PipelinesDir)
+			entries, err := listPipelineEntries(config.PipelinesDir)
 			if err != nil {
 				logrus.Errorf("pipeline list 失败: %v", err)
 				return err
 			}
-			if len(names) == 0 {
+			if len(entries) == 0 {
 				logrus.Info("pipeline list: 当前无任何流水线模板")
 				return nil
 			}
-			logrus.Debugf("pipeline list: 共 %d 个模板", len(names))
-			for _, name := range names {
-				fmt.Println(name)
+			logrus.Debugf("pipeline list: 共 %d 个模板", len(entries))
+			tw := tabwriter.NewWriter(os.Stdout, 2, 0, 2, ' ', 0)
+			fmt.Fprintln(tw, "NAME\tSTEPS\tSIZE\tMODIFIED")
+			for _, e := range entries {
+				stepsStr := fmt.Sprintf("%d", e.Steps)
+				if e.Steps < 0 {
+					stepsStr = "-"
+				}
+				modified := "-"
+				if !e.Modified.IsZero() {
+					modified = e.Modified.Format("2006-01-02 15:04")
+				}
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", e.Name, stepsStr, formatSize(e.Size), modified)
 			}
+			tw.Flush()
 			logrus.Info("pipeline list: 完成")
 			return nil
 		},
@@ -100,6 +113,46 @@ func listPipelineNames(pipelinesDir string) ([]string, error) {
 	}
 	sort.Strings(names)
 	return names, nil
+}
+
+// pipelineListEntry 用于 list 命令的表格行。
+type pipelineListEntry struct {
+	Name     string
+	Steps    int
+	Size     int64
+	Modified time.Time
+}
+
+// listPipelineEntries 返回所有流水线模板的详细信息（名称、步骤数、文件大小、修改时间）。
+func listPipelineEntries(pipelinesDir string) ([]pipelineListEntry, error) {
+	names, err := listPipelineNames(pipelinesDir)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]pipelineListEntry, 0, len(names))
+	for _, name := range names {
+		path := filepath.Join(pipelinesDir, name+pipelineTemplateSuffixCLI)
+		info, err := os.Stat(path)
+		if err != nil {
+			entries = append(entries, pipelineListEntry{Name: name, Steps: -1})
+			continue
+		}
+		steps := 0
+		data, err := os.ReadFile(path)
+		if err == nil {
+			var templateSteps []TemplateStep
+			if json.Unmarshal(data, &templateSteps) == nil {
+				steps = len(templateSteps)
+			}
+		}
+		entries = append(entries, pipelineListEntry{
+			Name:     name,
+			Steps:    steps,
+			Size:     info.Size(),
+			Modified: info.ModTime(),
+		})
+	}
+	return entries, nil
 }
 
 func deletePipelineByName(pipelinesDir, name string) error {

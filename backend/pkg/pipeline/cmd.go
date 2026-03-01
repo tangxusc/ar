@@ -6,8 +6,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -737,9 +738,16 @@ func addImageCommand(rootCommand *cobra.Command) {
 				return nil
 			}
 			logrus.Debugf("image list: 共 %d 个镜像", len(list))
+			tw := tabwriter.NewWriter(os.Stdout, 2, 0, 2, ' ', 0)
+			fmt.Fprintln(tw, "NAME\tREF\tDIGEST\tSIZE")
 			for _, e := range list {
-				fmt.Printf("%s\t%s\n", e.Name, e.Ref)
+				digest := e.Digest
+				if digest != "" && len(digest) > 19 {
+					digest = digest[:12] + "…" + digest[len(digest)-7:]
+				}
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", e.Name, e.Ref, digest, formatSize(e.Size))
 			}
+			tw.Flush()
 			logrus.Info("image list: 完成")
 			return nil
 		},
@@ -806,4 +814,23 @@ func addImageCommand(rootCommand *cobra.Command) {
 	}
 	pruneCmd.Flags().BoolVar(&pruneAll, "all", false, "删除所有已导入镜像（慎用）")
 	imageCmd.AddCommand(pruneCmd)
+}
+
+// formatSize 将字节数格式化为人类可读（如 1.2 GiB），0 或负数返回 "-"。
+func formatSize(n int64) string {
+	if n <= 0 {
+		return "-"
+	}
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	units := []string{"KiB", "MiB", "GiB", "TiB"}
+	div := int64(unit)
+	exp := 0
+	for v := n / unit; v >= unit && exp+1 < len(units); v /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %s", float64(n)/float64(div), units[exp])
 }

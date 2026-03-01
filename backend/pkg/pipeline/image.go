@@ -18,9 +18,11 @@ import (
 
 // ImageEntry 表示镜像仓库中的一条镜像记录。
 type ImageEntry struct {
-	Name string // 存储目录名（用于 rm/prune 指定）
-	Ref  string // 镜像引用名（来自 annotation 或 Name）
-	Path string // 完整路径
+	Name   string // 存储目录名（用于 rm/prune 指定）
+	Ref    string // 镜像引用名（来自 annotation 或 Name）
+	Path   string // 完整路径
+	Digest string // 镜像 digest（如 sha256:xxx），可能为空
+	Size   int64  // 存储目录占用字节数，0 表示未统计
 }
 
 // registryAuthEntry 表示单个镜像仓库的认证信息。
@@ -141,7 +143,7 @@ func ListImages(storeDir string) ([]ImageEntry, error) {
 			continue
 		}
 		path := filepath.Join(storeDir, name)
-		ref, err := readImageRefFromLayout(path)
+		ref, digest, err := readImageRefAndDigestFromLayout(path)
 		if err != nil {
 			// 非 OCI layout 或损坏则跳过，不视为错误
 			continue
@@ -149,7 +151,11 @@ func ListImages(storeDir string) ([]ImageEntry, error) {
 		if ref == "" {
 			ref = name
 		}
-		list = append(list, ImageEntry{Name: name, Ref: ref, Path: path})
+		entry := ImageEntry{Name: name, Ref: ref, Path: path, Digest: digest}
+		if sz := dirSize(path); sz >= 0 {
+			entry.Size = sz
+		}
+		list = append(list, entry)
 	}
 	return list, nil
 }
@@ -330,31 +336,59 @@ func PushImageFromStore(imageNameOrRef, storeDir, targetRef string, tlsVerify bo
 
 // readImageRefFromLayout 从 OCI layout 目录读取 org.opencontainers.image.ref.name 注解。
 func readImageRefFromLayout(layoutPath string) (string, error) {
+	ref, _, err := readImageRefAndDigestFromLayout(layoutPath)
+	return ref, err
+}
+
+// readImageRefAndDigestFromLayout 从 OCI layout 目录读取 ref 与 digest。
+func readImageRefAndDigestFromLayout(layoutPath string) (ref, digest string, err error) {
 	indexPath := filepath.Join(layoutPath, "index.json")
-	if _, err := os.Stat(indexPath); err != nil {
-		return "", err
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		return "", "", err
 	}
 	ociPath, err := layout.FromPath(layoutPath)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	index, err := ociPath.ImageIndex()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	manifest, err := index.IndexManifest()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if len(manifest.Manifests) == 0 {
-		return "", nil
+		return "", "", nil
 	}
-	if manifest.Manifests[0].Annotations != nil {
-		if ref := manifest.Manifests[0].Annotations[ociRefNameAnnotation]; ref != "" {
-			return ref, nil
+	desc := manifest.Manifests[0]
+	if desc.Annotations != nil {
+		if r := desc.Annotations[ociRefNameAnnotation]; r != "" {
+			ref = r
 		}
 	}
-	return "", nil
+	if s := desc.Digest.String(); s != "" {
+		digest = s
+	}
+	return ref, digest, nil
+}
+
+// dirSize 返回目录占用字节数（近似），失败返回 -1。
+func dirSize(root string) int64 {
+	var total int64
+	err := filepath.Walk(root, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // 忽略单文件错误，继续统计
+		}
+		if info != nil && !info.IsDir() {
+			total += info.Size()
+		}
+		return nil
+	})
+	if err != nil {
+		return -1
+	}
+	return total
 }
 
 // DeleteImage 从 storeDir 中删除指定名称的镜像目录。
