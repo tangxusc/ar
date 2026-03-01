@@ -533,7 +533,7 @@ func writeRuntimeSpec(bundleDir string, image v1.Image, pipelinesDir, runtimeIma
 				{Type: specs.IPCNamespace},
 				{Type: specs.UTSNamespace},
 				{Type: specs.MountNamespace},
-				{Type: specs.NetworkNamespace},
+				// 不创建独立 NetworkNamespace，使用主机网络
 			},
 			MaskedPaths: []string{
 				"/proc/acpi",

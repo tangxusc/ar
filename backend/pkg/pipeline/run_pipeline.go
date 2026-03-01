@@ -75,7 +75,7 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 			return taskID, err
 		}
 
-		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), step.Name, i+1)
+		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, i+1), i+1)
 		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, containerID, step)
 
 		if result.Err != nil {
@@ -139,7 +139,7 @@ func (r *Runner) Resume(ctx context.Context, taskID string) error {
 			return err
 		}
 
-		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), step.Name, i+1)
+		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, i+1), i+1)
 		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, containerID, step)
 
 		if result.Err != nil {

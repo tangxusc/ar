@@ -1,6 +1,3 @@
-FROM ubuntu:latest
+FROM alpine:latest
 
-RUN apt-get update && apt-get install -y \
-    ssh \
-    sshpass \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache openssh-client sshpass curl wget net-tools busybox-extras

@@ -194,15 +194,37 @@ func sanitizePipelineName(s string) string {
 	return strings.Trim(b.String(), "._-")
 }
 
-// WritePipelineJSON 将 runData 写入 runDir/pipeline.json。
+// sanitizeStepNameForContainerID 将步骤名转为 OCI/runc 允许的容器 ID 片段（仅 [a-zA-Z0-9_.-]）。
+// 若结果为空（如全中文步骤名），返回 "step" + index 作为回退，保证唯一且合法。
+func sanitizeStepNameForContainerID(stepName string, stepIndex int) string {
+	sanitized := sanitizePipelineName(stepName)
+	if sanitized != "" {
+		return sanitized
+	}
+	return fmt.Sprintf("step%d", stepIndex)
+}
+
+// WritePipelineJSON 将 runData 写入 runDir/pipeline.json，并 Sync 确保容器启动前落盘。
 func WritePipelineJSON(runDir string, runData *PipelineRunData) error {
+	if runData == nil {
+		return fmt.Errorf("runData 不能为空")
+	}
 	path := filepath.Join(runDir, "pipeline.json")
 	data, err := json.MarshalIndent(runData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("序列化 pipeline.json 失败: %w", err)
 	}
+	if len(data) == 0 {
+		return fmt.Errorf("序列化 pipeline.json 结果为空")
+	}
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("写入 pipeline.json 失败 %s: %w", path, err)
+	}
+	// 确保落盘后再启动容器，避免容器内读到空或未刷新的文件
+	f, err := os.Open(path)
+	if err == nil {
+		_ = f.Sync()
+		_ = f.Close()
 	}
 	logrus.Debugf("已写入 %s", path)
 	return nil

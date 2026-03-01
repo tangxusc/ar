@@ -80,7 +80,7 @@ func writeRuntimeSpecForRun(bundleDir string, image v1.Image, tasksDir, currentT
 				{Type: specs.IPCNamespace},
 				{Type: specs.UTSNamespace},
 				{Type: specs.MountNamespace},
-				{Type: specs.NetworkNamespace},
+				// 不创建独立 NetworkNamespace，使用主机网络，使步骤内可访问外网（如 curl/telnet 到目标节点）
 			},
 			MaskedPaths: []string{
 				"/proc/acpi", "/proc/asound", "/proc/kcore", "/proc/keys", "/proc/latency_stats",
@@ -123,7 +123,16 @@ func RunStep(ctx context.Context, runtimeRoot, imagesStoreDir, runDir, nodeDir, 
 	if err := extractRootfsFromImage(img, rootfsDir); err != nil {
 		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("解包步骤镜像失败: %w", err)}
 	}
-	if err := writeRuntimeSpecForRun(bundleDir, img, runDir, nodeDir, step); err != nil {
+	// 使用绝对路径作为 bind mount 源，避免 runc 相对 bundle 解析导致挂载到错误目录
+	tasksDirAbs, err := filepath.Abs(runDir)
+	if err != nil {
+		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("解析 runDir 绝对路径失败: %w", err)}
+	}
+	nodeDirAbs, err := filepath.Abs(nodeDir)
+	if err != nil {
+		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("解析 nodeDir 绝对路径失败: %w", err)}
+	}
+	if err := writeRuntimeSpecForRun(bundleDir, img, tasksDirAbs, nodeDirAbs, step); err != nil {
 		return RunStepResult{ExitCode: -1, Err: err}
 	}
 

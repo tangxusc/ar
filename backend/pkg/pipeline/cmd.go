@@ -360,7 +360,7 @@ func listRunningTasks(arRoot, filterPipelineName string) error {
 				if step.Status != StatusRunning {
 					continue
 				}
-				containerID := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, step.Name, i+1)
+				containerID := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, sanitizeStepNameForContainerID(step.Name, i+1), i+1)
 				rows = append(rows, runningRow{
 					pipelineName: pipelineName,
 					taskID:       taskID,
@@ -415,7 +415,7 @@ func stopPipelineTask(arRoot, runtimeRoot, taskID string) error {
 		switch step.Status {
 		case StatusRunning:
 			// 计算容器 ID，与 Run()/Resume() 时保持一致。
-			containerID := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, step.Name, i+1)
+			containerID := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, sanitizeStepNameForContainerID(step.Name, i+1), i+1)
 			if err := container.StopAndRemoveOCIContainers(runtimeRoot, containerID); err != nil {
 				logrus.WithError(err).Warnf("停止流水线任务容器失败: %s", containerID)
 			}
@@ -458,7 +458,7 @@ func showTaskContainerLogs(arRoot, taskID, containerID string, follow bool, tail
 		pipelineDirName := filepath.Base(filepath.Dir(runDir))
 
 		for i, step := range runData.Steps {
-			cid := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, step.Name, i+1)
+			cid := fmt.Sprintf("ar_%s_%s_%d", pipelineDirName, sanitizeStepNameForContainerID(step.Name, i+1), i+1)
 			if err := showOneContainerLogs(runDir, cid, follow, tailLines); err != nil {
 				return err
 			}
