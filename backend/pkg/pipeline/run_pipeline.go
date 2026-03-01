@@ -26,7 +26,7 @@ func NewRunner(arRoot, pipelinesDir, imagesStoreDir, runtimeRoot string) *Runner
 	}
 }
 
-// Run 执行流水线：加载模板、拓扑序、渲染、创建任务目录、按序执行各步并更新 pipeline.json。
+// Run 执行流水线：加载模板、用节点渲染生成 pipeline.json、解析为 DAG、按拓扑序执行并更新 pipeline.json。
 // 若某步退出码非 0 则停止后续步骤并返回错误。
 // taskID 若为空则自动生成；调用方可传入预生成的 taskID 以便与停止/恢复时注册的 cancel 对应。
 // 返回 taskID 与错误。
@@ -36,16 +36,11 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 		logrus.Error("Runner.Run: 节点列表为空")
 		return "", fmt.Errorf("节点列表不能为空（请通过 -n 指定节点 JSON 文件）")
 	}
-	node := nodes[0] // 设计：多节点时可按步分配，此处简化为首节点用于全部步骤
 
-	steps, err := LoadTemplate(r.pipelinesDir, pipelineName)
+	// 1. 加载模板并用节点渲染（支持 .template.json 内 Go template 语法），得到带 DAG 的步骤列表（不在此处拓扑排序）
+	renderedSteps, err := LoadAndRenderTemplate(r.pipelinesDir, pipelineName, nodes)
 	if err != nil {
 		logrus.Errorf("Runner.Run: 加载模板失败 pipeline=%s: %v", pipelineName, err)
-		return "", err
-	}
-	ordered, err := TopoOrder(steps)
-	if err != nil {
-		logrus.Errorf("Runner.Run: 拓扑排序失败: %v", err)
 		return "", err
 	}
 
@@ -56,16 +51,33 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 	if err := os.MkdirAll(runDir, 0755); err != nil {
 		return "", fmt.Errorf("创建运行目录失败 %s: %w", runDir, err)
 	}
-	runData := BuildRunData(taskID, pipelineName, ordered, node)
+
+	// 2. 生成 pipeline.json（执行计划 DAG）并写入任务目录
+	runData := BuildRunData(taskID, pipelineName, renderedSteps, nodes)
 	if err := WritePipelineJSON(runDir, runData); err != nil {
 		return "", err
 	}
 
+	// 3. 从 pipeline.json 解析为 DAG，得到拓扑序执行顺序
+	orderedSteps, err := OrderStepsFromRunData(runData.Steps)
+	if err != nil {
+		logrus.Errorf("Runner.Run: 解析 DAG 失败: %v", err)
+		return "", err
+	}
+
+	// 步骤名 -> runData.Steps 下标，用于按执行顺序更新状态
+	nameToIndex := make(map[string]int)
+	for i := range runData.Steps {
+		nameToIndex[runData.Steps[i].Name] = i
+	}
+
 	logrus.Infof("开始执行流水线: pipeline=%s taskId=%s runDir=%s", pipelineName, taskID, runDir)
 
-	for i := range runData.Steps {
-		step := &runData.Steps[i]
-		nodeDir := NodeDir(runDir, i)
+	// 4. 按 DAG 拓扑序执行各步
+	for _, orderedStep := range orderedSteps {
+		stepIndex := nameToIndex[orderedStep.Name]
+		step := &runData.Steps[stepIndex]
+		nodeDir := NodeDir(runDir, stepIndex)
 		if err := os.MkdirAll(nodeDir, 0755); err != nil {
 			return taskID, fmt.Errorf("创建节点目录失败 %s: %w", nodeDir, err)
 		}
@@ -75,7 +87,7 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 			return taskID, err
 		}
 
-		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, i+1), i+1)
+		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, stepIndex+1), stepIndex+1)
 		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, containerID, step)
 
 		if result.Err != nil {
@@ -102,7 +114,7 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 	return taskID, nil
 }
 
-// Resume 从 pipeline.json 恢复流水线：读取任务目录，从第一个未成功步骤开始继续执行。
+// Resume 从 pipeline.json 恢复流水线：读取任务目录、解析 DAG，从第一个未成功步骤开始按拓扑序继续执行。
 func (r *Runner) Resume(ctx context.Context, taskID string) error {
 	runDir, err := FindRunDirByTaskID(r.arRoot, taskID)
 	if err != nil {
@@ -113,23 +125,35 @@ func (r *Runner) Resume(ctx context.Context, taskID string) error {
 		return fmt.Errorf("读取 pipeline.json 失败: %w", err)
 	}
 	pipelineName := runData.PipelineName
-	startIndex := -1
+
+	orderedSteps, err := OrderStepsFromRunData(runData.Steps)
+	if err != nil {
+		return fmt.Errorf("解析 pipeline.json DAG 失败: %w", err)
+	}
+	nameToIndex := make(map[string]int)
 	for i := range runData.Steps {
-		if runData.Steps[i].Status != StatusSuccess {
-			startIndex = i
+		nameToIndex[runData.Steps[i].Name] = i
+	}
+
+	startExecIndex := -1
+	for i, s := range orderedSteps {
+		if runData.Steps[nameToIndex[s.Name]].Status != StatusSuccess {
+			startExecIndex = i
 			break
 		}
 	}
-	if startIndex < 0 {
+	if startExecIndex < 0 {
 		logrus.Infof("流水线已全部完成，无需恢复: pipeline=%s taskId=%s", pipelineName, taskID)
 		return nil
 	}
 
-	logrus.Infof("恢复流水线: pipeline=%s taskId=%s runDir=%s 从步骤 %d 开始", pipelineName, taskID, runDir, startIndex+1)
+	logrus.Infof("恢复流水线: pipeline=%s taskId=%s runDir=%s 从步骤 %d 开始", pipelineName, taskID, runDir, startExecIndex+1)
 
-	for i := startIndex; i < len(runData.Steps); i++ {
-		step := &runData.Steps[i]
-		nodeDir := NodeDir(runDir, i)
+	for i := startExecIndex; i < len(orderedSteps); i++ {
+		orderedStep := orderedSteps[i]
+		stepIndex := nameToIndex[orderedStep.Name]
+		step := &runData.Steps[stepIndex]
+		nodeDir := NodeDir(runDir, stepIndex)
 		if err := os.MkdirAll(nodeDir, 0755); err != nil {
 			return fmt.Errorf("创建节点目录失败 %s: %w", nodeDir, err)
 		}
@@ -139,7 +163,7 @@ func (r *Runner) Resume(ctx context.Context, taskID string) error {
 			return err
 		}
 
-		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, i+1), i+1)
+		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, stepIndex+1), stepIndex+1)
 		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, containerID, step)
 
 		if result.Err != nil {

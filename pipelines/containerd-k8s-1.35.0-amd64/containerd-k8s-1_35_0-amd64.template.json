@@ -1,30 +1,30 @@
 [
-    {
-        "name": "print-pipeline-execution-plan",
-        "image": "containerd-k8s-1_35_0-base:latest",
-        "entrypoint": "cat",
-        "args": [
-            "/tasks/pipeline.json"
-        ],
-        "nodes": ["init-node"]
-    },
-    {
-        "name": "init-node",
-        "description": "禁用swap,调整ulimit",
-        "image": "containerd-k8s-1_35_0-base:latest",
-        "entrypoint": "sshpass",
-        "args": [
-            "-e",
-            "ssh",
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            "{{node_username}}@{{node_ip}}",
-            "cat /etc/hosts"
-        ],
-        "env": [
-            "SSHPASS={{node_password}}"
-        ]
-    }
+  {
+    "name": "print-pipeline-execution-plan",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "cat",
+    "args": ["/tasks/pipeline.json"],
+    "nodes": [
+        {{range $i, $n := .nodes}}{{if $i}}, {{end}}"init-node-{{$i}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}{{if $i}},{{end}}
+  {
+    "name": "init-node-{{$i}}",
+    "description": "禁用swap,调整ulimit",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "cat /etc/hosts"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"]
+  }
+  {{end}}
 ]
