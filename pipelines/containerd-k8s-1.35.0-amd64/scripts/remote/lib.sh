@@ -152,13 +152,36 @@ remote_fetch() {
   local idx="$1"
   local src="$2"
   local dst="$3"
-  local -a args=(
+  local src_base tmp_dir tmp_src remote_cmd
+  local -a scp_args=(
     -P "${NODE_PORTS[$idx]}"
     -o StrictHostKeyChecking=no
     -o UserKnownHostsFile=/dev/null
   )
+  local -a ssh_args=(
+    -p "${NODE_PORTS[$idx]}"
+    -o StrictHostKeyChecking=no
+    -o UserKnownHostsFile=/dev/null
+  )
+  src_base="$(basename "${src}")"
+  tmp_dir="/tmp/ar-fetch-${RANDOM}-$$"
+  tmp_src="${tmp_dir}/${src_base}"
   mkdir -p "$(dirname "${dst}")"
-  SSHPASS="${NODE_PASSWORDS[$idx]}" sshpass -e scp "${args[@]}" "${NODE_USERS[$idx]}@${NODE_IPS[$idx]}:${src}" "${dst}"
+
+  remote_cmd=$(
+    cat <<EOF
+set -e
+sudo mkdir -p ${tmp_dir@Q}
+sudo cp -a ${src@Q} ${tmp_src@Q}
+sudo chmod a+r ${tmp_src@Q}
+EOF
+  )
+  SSHPASS="${NODE_PASSWORDS[$idx]}" sshpass -e ssh "${ssh_args[@]}" "${NODE_USERS[$idx]}@${NODE_IPS[$idx]}" "bash -lc $(printf '%q' "${remote_cmd}")"
+
+  SSHPASS="${NODE_PASSWORDS[$idx]}" sshpass -e scp "${scp_args[@]}" "${NODE_USERS[$idx]}@${NODE_IPS[$idx]}:${tmp_src}" "${dst}"
+
+  remote_cmd="sudo rm -rf $(printf '%q' "${tmp_dir}")"
+  SSHPASS="${NODE_PASSWORDS[$idx]}" sshpass -e ssh "${ssh_args[@]}" "${NODE_USERS[$idx]}@${NODE_IPS[$idx]}" "${remote_cmd}"
 }
 
 remote_write() {

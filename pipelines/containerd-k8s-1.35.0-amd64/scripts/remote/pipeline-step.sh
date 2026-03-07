@@ -6,6 +6,14 @@ source "${SCRIPT_DIR}/lib.sh"
 source "${SCRIPT_DIR}/actions.sh"
 
 main() {
+  mkdir -p /tasks/cluster/
+  mkdir -p /tasks/inventory/
+  mkdir -p /tasks/rendered/
+  mkdir -p /tasks/pki/
+  mkdir -p /tasks/kubeconfig/
+  mkdir -p /tasks/bootstrap/
+  mkdir -p /tasks/reports/
+  mkdir -p /tasks/diagnostics/
   parse_nodes
   require_command bash
   [[ -n "${ACTION:-}" ]] || {
