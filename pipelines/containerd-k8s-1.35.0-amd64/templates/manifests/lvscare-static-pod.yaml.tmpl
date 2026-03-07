@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lvscare
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  containers:
+    - name: lvscare
+      image: ${LVSCARE_POD_IMAGE}
+      command:
+        - /usr/local/bin/lvscare
+      args:
+        - care
+        - --vs
+        - ${HA_ENDPOINT#https://}
+${MASTER_RS_ARGS}
+        - --health-path
+        - /healthz
+        - --interval
+        - "5"
+        - --mode
+        - link
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: modules
+          mountPath: /lib/modules
+        - name: hostbin
+          mountPath: /usr/local/bin/lvscare
+          readOnly: true
+  volumes:
+    - name: modules
+      hostPath:
+        path: /lib/modules
+    - name: hostbin
+      hostPath:
+        path: /usr/local/bin/lvscare

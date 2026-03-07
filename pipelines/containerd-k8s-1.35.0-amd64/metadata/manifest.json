@@ -1,0 +1,648 @@
+{
+  "version": 1,
+  "artifacts": [
+    {
+      "path": "steps/base/artifacts/bin/cfssl"
+    },
+    {
+      "path": "steps/base/artifacts/bin/cfssljson"
+    },
+    {
+      "path": "steps/base/artifacts/bin/runc"
+    },
+    {
+      "path": "steps/base/artifacts/bin/skopeo"
+    },
+    {
+      "path": "steps/base/artifacts/checksums/etcd.sha256"
+    },
+    {
+      "path": "steps/base/artifacts/checksums/kubernetes.sha256"
+    },
+    {
+      "path": "steps/base/artifacts/checksums/runtime.sha256"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/.helmignore"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/Chart.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/LICENSE"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/README.md"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/README.md.gotmpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/agent/poststart-eni.bash"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/cilium-agent/dashboards/cilium-dashboard.json"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/cilium-envoy/configmap/bootstrap-config.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/cilium-operator/dashboards/cilium-operator-dashboard.json"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/hubble/dashboards/hubble-dashboard.json"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/hubble/dashboards/hubble-dns-namespace.json"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/hubble/dashboards/hubble-l7-http-metrics-by-workload.json"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/hubble/dashboards/hubble-network-overview-namespace.json"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/nodeinit/prestop.bash"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/nodeinit/startup.bash"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/spire/init.bash"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/files/spire/wait-for-spire.bash"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/NOTES.txt"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/_extensions.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/_helpers.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/daemonset.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/dashboards-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/role.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/rolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-agent/servicemonitor.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-ca-bundle-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-ca-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-dynamic-metrics-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-envoy/configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-envoy/daemonset.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-envoy/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-envoy/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-envoy/servicemonitor.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-flowlog-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-gateway-api-class.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-ingress-class.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-ingress-service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-nodeinit/daemonset.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-nodeinit/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/_helpers.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/dashboards-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/deployment.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/poddisruptionbudget.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/role.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/rolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-operator/servicemonitor.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-preflight/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-preflight/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-preflight/daemonset.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-preflight/deployment.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-preflight/poddisruptionbudget.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-preflight/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-resource-quota.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/cilium-secrets-namespace.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/_helpers.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/deployment.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/metrics-service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/poddisruptionbudget.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/servicemonitor.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-certmanager/admin-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-certmanager/client-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-certmanager/local-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-certmanager/remote-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-certmanager/server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-cronjob/_job-spec.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-cronjob/cronjob.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-cronjob/job.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-cronjob/role.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-cronjob/rolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-cronjob/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-helm/admin-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-helm/client-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-helm/local-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-helm/remote-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-helm/server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-provided/admin-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-provided/client-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-provided/remote-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/tls-provided/server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-apiserver/users-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-config/_helpers.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-config/clustermesh-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/clustermesh-config/kvstoremesh-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/dashboards-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/metrics-service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/peer-service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/servicemonitor.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-certmanager/metrics-server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-certmanager/relay-client-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-certmanager/relay-server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-certmanager/server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-certmanager/ui-client-certs.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-cronjob/_job-spec.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-cronjob/cronjob.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-cronjob/job.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-cronjob/role.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-cronjob/rolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-cronjob/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-helm/metrics-server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-helm/relay-client-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-helm/relay-server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-helm/server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-helm/ui-client-certs.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-provided/metrics-server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-provided/relay-client-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-provided/relay-server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-provided/server-secret.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble/tls-provided/ui-client-certs.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-relay/configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-relay/deployment.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-relay/metrics-service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-relay/poddisruptionbudget.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-relay/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-relay/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-relay/servicemonitor.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/_nginx.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/deployment.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/ingress.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/poddisruptionbudget.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/hubble-ui/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/agent/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/agent/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/agent/configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/agent/daemonset.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/agent/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/bundle-configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/namespace.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/role.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/rolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/spire/server/statefulset.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/templates/validate.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/values.schema.json"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/values.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/chart/values.yaml.tmpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/cilium/install.env"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/.helmignore"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/Chart.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/README.md"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/NOTES.txt"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/_helpers.tpl"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/clusterrole-autoscaler.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/clusterrole.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/clusterrolebinding-autoscaler.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/clusterrolebinding.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/configmap-autoscaler.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/configmap.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/deployment-autoscaler.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/deployment.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/hpa.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/poddisruptionbudget.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/service-metrics.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/service.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/serviceaccount-autoscaler.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/serviceaccount.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/templates/servicemonitor.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/clusterrole-autoscaler_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/clusterrole_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/clusterrolebinding_autoscaler_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/clusterrolebinding_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/configmap_autoscaler_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/configmap_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/deployment-autoscaler_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/deployment_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/hpa_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/poddisruptionbudget_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/service-metrics_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/service_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/serviceaccount_autoscaler_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/serviceaccount_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/tests/servicemonitor_test.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/chart/values.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/coredns/values.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/manifests/metrics-server/components.yaml"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/cilium-chart-1.17.4.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/cilium-linux-amd64.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/cilium-linux-amd64.tar.gz.sha256sum"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/cni-plugins-linux-amd64-v1.9.0.tgz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/containerd-2.2.1-linux-amd64.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/coredns-chart-1.45.2.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/crictl-v1.35.0-linux-amd64.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/etcd-v3.6.7-linux-amd64.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/helm-v4.0.4-linux-amd64.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/kubernetes-server-linux-amd64.tar.gz"
+    },
+    {
+      "path": "steps/base/artifacts/tarballs/nerdctl-2.2.1-linux-amd64.tar.gz"
+    }
+  ],
+  "images": []
+}

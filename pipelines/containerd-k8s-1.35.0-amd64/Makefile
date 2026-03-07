@@ -1,10 +1,89 @@
-build:
-	cp *.template.json /var/lib/ar/pipelines/
+SHELL := /bin/bash
+
+PIPELINE_NAME := containerd-k8s-1_35_0-amd64
+PIPELINE_TEMPLATE := containerd-k8s-1_35_0-amd64.template.json
+PIPELINE_IMAGE := pipeline-$(PIPELINE_NAME):latest
+PIPELINE_ROOT := $(CURDIR)
+NODE_FILE ?= /home/ubuntu/ar/backend/test/node.json
+
+.PHONY: help clean clean-package prepare-dirs download-artifacts download-runtime-artifacts download-kubernetes-artifacts download-pki-artifacts download-cni-artifacts download-addon-artifacts verify-artifacts package-artifacts build-step-images install-local-pipeline build-pipeline-image build dist test
+
+help:
+	@echo "Targets:"
+	@echo "  prepare-dirs                Create artifact directories"
+	@echo "  download-artifacts          Download all offline artifacts"
+	@echo "  verify-artifacts            Validate artifacts and metadata"
+	@echo "  package-artifacts           Refresh step build contexts and manifest metadata"
+	@echo "  build-step-images           Build all step images"
+	@echo "  install-local-pipeline      Install template locally and prepare step images"
+	@echo "  build-pipeline-image        Build distributable pipeline image"
+	@echo "  build                       Prepare local runnable pipeline"
+	@echo "  dist                        Build distributable pipeline image"
+	@echo "  test                        Run pipeline with NODE_FILE=$(NODE_FILE)"
+
+clean:
+	rm -rf .tmp
+
+clean-package:
+	rm -rf .tmp
+
+prepare-dirs:
+	mkdir -p steps/base/artifacts/bin
+	mkdir -p steps/base/artifacts/tarballs
+	mkdir -p steps/base/artifacts/images
+	mkdir -p steps/base/artifacts/images/registry
+	mkdir -p steps/base/artifacts/images/pause
+	mkdir -p steps/base/artifacts/images/cilium
+	mkdir -p steps/base/artifacts/images/hubble
+	mkdir -p steps/base/artifacts/images/coredns
+	mkdir -p steps/base/artifacts/images/lvscare
+	mkdir -p steps/base/artifacts/manifests
+	mkdir -p steps/base/artifacts/manifests/cilium
+	mkdir -p steps/base/artifacts/manifests/coredns
+	mkdir -p steps/base/artifacts/manifests/metrics-server
+	mkdir -p steps/base/artifacts/checksums
+	mkdir -p .tmp
+
+download-runtime-artifacts: prepare-dirs
+	bash scripts/download/download-runtime-artifacts.sh
+
+download-kubernetes-artifacts: prepare-dirs
+	bash scripts/download/download-kubernetes-artifacts.sh
+
+download-pki-artifacts: prepare-dirs
+	bash scripts/download/download-pki-artifacts.sh
+
+download-cni-artifacts: prepare-dirs
+	bash scripts/download/download-cni-artifacts.sh
+
+download-addon-artifacts: prepare-dirs
+	bash scripts/download/download-addon-artifacts.sh
+
+download-artifacts: download-runtime-artifacts download-kubernetes-artifacts download-pki-artifacts download-cni-artifacts download-addon-artifacts
+
+verify-artifacts: download-artifacts
+	bash scripts/package/package-artifacts.sh verify
+
+package-artifacts: verify-artifacts
+	bash scripts/package/package-artifacts.sh package
+
+build-step-images: package-artifacts
 	@for dir in steps/*; do \
 		if [ -d "$$dir" ]; then \
-			(cd $$dir && make build); \
+			$(MAKE) -C "$$dir" build; \
 		fi; \
 	done
+
+install-local-pipeline: build-step-images
+	cp "$(PIPELINE_TEMPLATE)" /var/lib/ar/pipelines/
 	allrun pipeline list
-test:
-	allrun pipeline run -p containerd-k8s-1_35_0-amd64 -n /home/ubuntu/ar/backend/test/node.json
+
+build-pipeline-image: build-step-images
+	allrun pipeline build -p "./$(PIPELINE_TEMPLATE)" -t "$(PIPELINE_IMAGE)" -i "./images.txt"
+
+build: verify-artifacts build-step-images install-local-pipeline
+
+dist: verify-artifacts package-artifacts build-step-images build-pipeline-image
+
+test: build
+	allrun pipeline run -p $(PIPELINE_NAME) -n "$(NODE_FILE)"

@@ -1,0 +1,14 @@
+[Unit]
+Description=Etcd Service
+Documentation=https://etcd.io
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/etcd --config-file=/etc/etcd/etcd.config.yml
+Restart=always
+RestartSec=10
+LimitNOFILE=infinity
+
+[Install]
+WantedBy=multi-user.target

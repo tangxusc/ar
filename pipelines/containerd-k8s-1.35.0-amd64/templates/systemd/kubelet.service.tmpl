@@ -1,0 +1,20 @@
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/kubernetes/kubernetes
+After=network-online.target containerd.service
+Wants=network-online.target
+Requires=containerd.service
+
+[Service]
+ExecStart=/usr/local/bin/kubelet \
+  --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.kubeconfig \
+  --kubeconfig=/etc/kubernetes/kubelet.kubeconfig \
+  --config=/etc/kubernetes/kubelet-conf.yml \
+  --container-runtime-endpoint=unix:///run/containerd/containerd.sock \
+  --node-ip=${NODE_IP}
+Restart=always
+RestartSec=10
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

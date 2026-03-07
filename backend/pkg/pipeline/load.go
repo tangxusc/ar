@@ -887,9 +887,18 @@ func extractTarStream(reader io.Reader, destDir string) error {
 				return err
 			}
 		case tar.TypeLink:
-			linkTarget, err := safeJoin(destDir, filepath.Join(filepath.Dir(hdr.Name), hdr.Linkname))
+			// tar 规范下，TypeLink 的 Linkname 通常是归档内目标路径。
+			// 先按归档根路径解析，避免重复拼接当前目录导致路径错误。
+			linkTarget, err := safeJoin(destDir, hdr.Linkname)
 			if err != nil {
 				return err
+			}
+			// 兼容少数归档将 Linkname 写成相对当前目录的情况。
+			if _, statErr := os.Stat(linkTarget); os.IsNotExist(statErr) && !filepath.IsAbs(hdr.Linkname) {
+				fallback, fbErr := safeJoin(destDir, filepath.Join(filepath.Dir(hdr.Name), hdr.Linkname))
+				if fbErr == nil {
+					linkTarget = fallback
+				}
 			}
 			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 				return err
