@@ -6,11 +6,13 @@ initial-advertise-peer-urls: https://${NODE_IP}:2380
 listen-peer-urls: https://${NODE_IP}:2380
 initial-cluster-state: new
 initial-cluster: ${ETCD_INITIAL_CLUSTER}
-cert-file: /etc/etcd/ssl/etcd.pem
-key-file: /etc/etcd/ssl/etcd-key.pem
-trusted-ca-file: /etc/etcd/ssl/etcd-ca.pem
-peer-cert-file: /etc/etcd/ssl/etcd.pem
-peer-key-file: /etc/etcd/ssl/etcd-key.pem
-peer-trusted-ca-file: /etc/etcd/ssl/etcd-ca.pem
-client-cert-auth: true
-peer-client-cert-auth: true
+client-transport-security:
+  cert-file: /etc/etcd/ssl/etcd.pem
+  key-file: /etc/etcd/ssl/etcd-key.pem
+  trusted-ca-file: /etc/etcd/ssl/etcd-ca.pem
+  client-cert-auth: true
+peer-transport-security:
+  cert-file: /etc/etcd/ssl/etcd.pem
+  key-file: /etc/etcd/ssl/etcd-key.pem
+  trusted-ca-file: /etc/etcd/ssl/etcd-ca.pem
+  client-cert-auth: true
