@@ -15,8 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// writeRuntimeSpecForRun 为流水线单步生成 OCI spec：挂载 /tasks 与 /current-task，进程参数来自 step。
-func writeRuntimeSpecForRun(bundleDir string, image v1.Image, tasksDir, currentTaskDir string, step *PipelineStepState) error {
+// writeRuntimeSpecForRun 为流水线单步生成 OCI spec：挂载 /tasks、/current-task 与 /ar-data，进程参数来自 step。
+func writeRuntimeSpecForRun(bundleDir string, image v1.Image, tasksDir, currentTaskDir, hostDataDir string, step *PipelineStepState) error {
 	if err := os.MkdirAll(bundleDir, 0755); err != nil {
 		return fmt.Errorf("创建 bundle 目录失败: %w", err)
 	}
@@ -73,6 +73,7 @@ func writeRuntimeSpecForRun(bundleDir string, image v1.Image, tasksDir, currentT
 			{Destination: "/sys", Type: "sysfs", Source: "sysfs", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
 			{Destination: "/tasks", Type: "bind", Source: tasksDir, Options: []string{"rbind", "rw"}},
 			{Destination: "/current-task", Type: "bind", Source: currentTaskDir, Options: []string{"rbind", "rw"}},
+			{Destination: "/ar-data", Type: "bind", Source: hostDataDir, Options: []string{"rbind", "rw"}},
 		},
 		Linux: &specs.Linux{
 			Namespaces: []specs.LinuxNamespace{
@@ -106,8 +107,8 @@ type RunStepResult struct {
 	Err      error
 }
 
-// RunStep 运行流水线中的单步：从 store 取镜像、解包、写 spec（/tasks、/current-task）、执行容器。
-func RunStep(ctx context.Context, runtimeRoot, imagesStoreDir, runDir, nodeDir, containerID string, step *PipelineStepState) RunStepResult {
+// RunStep 运行流水线中的单步：从 store 取镜像、解包、写 spec（/tasks、/current-task、/ar-data）、执行容器。
+func RunStep(ctx context.Context, runtimeRoot, imagesStoreDir, runDir, nodeDir, hostDataDir, containerID string, step *PipelineStepState) RunStepResult {
 	img, err := OpenImageFromStore(imagesStoreDir, step.Image)
 	if err != nil {
 		return RunStepResult{ExitCode: -1, Err: err}
@@ -132,7 +133,14 @@ func RunStep(ctx context.Context, runtimeRoot, imagesStoreDir, runDir, nodeDir, 
 	if err != nil {
 		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("解析 nodeDir 绝对路径失败: %w", err)}
 	}
-	if err := writeRuntimeSpecForRun(bundleDir, img, tasksDirAbs, nodeDirAbs, step); err != nil {
+	if err := os.MkdirAll(hostDataDir, 0755); err != nil {
+		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("创建宿主机数据目录失败 %s: %w", hostDataDir, err)}
+	}
+	hostDataDirAbs, err := filepath.Abs(hostDataDir)
+	if err != nil {
+		return RunStepResult{ExitCode: -1, Err: fmt.Errorf("解析宿主机数据目录绝对路径失败: %w", err)}
+	}
+	if err := writeRuntimeSpecForRun(bundleDir, img, tasksDirAbs, nodeDirAbs, hostDataDirAbs, step); err != nil {
 		return RunStepResult{ExitCode: -1, Err: err}
 	}
 

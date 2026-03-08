@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 )
@@ -72,6 +73,7 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 	}
 
 	logrus.Infof("开始执行流水线: pipeline=%s taskId=%s runDir=%s", pipelineName, taskID, runDir)
+	hostDataDir := filepath.Join(r.arRoot, "data")
 
 	// 4. 按 DAG 拓扑序执行各步
 	for _, orderedStep := range orderedSteps {
@@ -88,7 +90,7 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 		}
 
 		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, stepIndex+1), stepIndex+1)
-		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, containerID, step)
+		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, hostDataDir, containerID, step)
 
 		if result.Err != nil {
 			step.Status = StatusFailed
@@ -148,6 +150,7 @@ func (r *Runner) Resume(ctx context.Context, taskID string) error {
 	}
 
 	logrus.Infof("恢复流水线: pipeline=%s taskId=%s runDir=%s 从步骤 %d 开始", pipelineName, taskID, runDir, startExecIndex+1)
+	hostDataDir := filepath.Join(r.arRoot, "data")
 
 	for i := startExecIndex; i < len(orderedSteps); i++ {
 		orderedStep := orderedSteps[i]
@@ -164,7 +167,7 @@ func (r *Runner) Resume(ctx context.Context, taskID string) error {
 		}
 
 		containerID := fmt.Sprintf("ar_%s_%s_%d", sanitizePipelineName(pipelineName), sanitizeStepNameForContainerID(step.Name, stepIndex+1), stepIndex+1)
-		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, containerID, step)
+		result := RunStep(ctx, r.runtimeRoot, r.imagesStoreDir, runDir, nodeDir, hostDataDir, containerID, step)
 
 		if result.Err != nil {
 			step.Status = StatusFailed

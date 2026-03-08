@@ -389,6 +389,7 @@ action_render_ha() {
   local idx master_idx j
   master_idx="$(first_master_index)"
   export HA_ENDPOINT="https://${NODE_IPS[$master_idx]}:6443"
+  export LVSCARE_VS="10.103.97.12:6443"
   export MASTER_RS_ARGS=""
   export LVSCARE_POD_IMAGE="ghcr.io/labring/lvscare:v5.1.2-rc3"
   for j in "${!NODE_IPS[@]}"; do
@@ -402,7 +403,7 @@ action_render_ha() {
       continue
     fi
     render_template "/templates/manifests/lvscare-static-pod.yaml.tmpl" > "/tasks/rendered/${NODE_IPS[$idx]}-lvscare.yaml"
-    printf 'LVSCARE_VS=%s:6443\n' "${NODE_IPS[$master_idx]}" > "/tasks/rendered/${NODE_IPS[$idx]}-lvscare.env"
+    printf 'LVSCARE_VS=%s\n' "${LVSCARE_VS}" > "/tasks/rendered/${NODE_IPS[$idx]}-lvscare.env"
   done
   write_current_summary "Rendered lvs-care manifests"
 }
@@ -516,9 +517,10 @@ action_install_kubelet_master() {
 }
 
 action_verify_ha() {
-  local idx ha_endpoint
+  local idx ha_endpoint lvscare_vs
   idx="$(first_master_index)"
-  ha_endpoint="https://${NODE_IPS[$idx]}:6443"
+  lvscare_vs="${LVSCARE_VS:-10.103.97.12:6443}"
+  ha_endpoint="https://${lvscare_vs}"
   {
     remote_exec "${idx}" "test -f /etc/kubernetes/manifests/lvscare.yaml && systemctl is-active kubelet && crictl ps | grep -E 'lvscare|pause' && ipvsadm -Ln"
     remote_exec "${idx}" "curl -k --max-time 10 ${ha_endpoint}/healthz"

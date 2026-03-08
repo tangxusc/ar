@@ -14,10 +14,12 @@ spec:
       args:
         - care
         - --vs
-        - 10.103.97.12:6443
+        - ${LVSCARE_VS}
 ${MASTER_RS_ARGS}
         - --health-path
         - /healthz
+        - --mode
+        - link
         - --interval
         - "5"
       securityContext:
