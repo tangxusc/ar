@@ -22,7 +22,7 @@ build:
 			-X '$(PKG_PATH).BuiltBy=$(BUILT_BY)' \
 		" \
 		main.go
-	cp $(APP_NAME) /usr/bin/$(APP_NAME)
+	sudo cp $(APP_NAME) /usr/bin/$(APP_NAME)
 
 
 .PHONY: run
