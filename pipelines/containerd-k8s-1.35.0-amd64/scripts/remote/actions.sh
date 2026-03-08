@@ -386,18 +386,11 @@ action_verify_etcd() {
 }
 
 action_render_ha() {
-  local idx master_idx j registry_repo
+  local idx master_idx j
   master_idx="$(first_master_index)"
   export HA_ENDPOINT="https://${NODE_IPS[$master_idx]}:6443"
   export MASTER_RS_ARGS=""
-  registry_repo="$(registry_endpoints)"
-  registry_repo="${registry_repo%%,*}"
-  registry_repo="${registry_repo#http://}"
-  if [[ -n "${registry_repo}" ]]; then
-    export LVSCARE_POD_IMAGE="${registry_repo}/system/pause:3.10"
-  else
-    export LVSCARE_POD_IMAGE="${PAUSE_IMAGE}"
-  fi
+  export LVSCARE_POD_IMAGE="ghcr.io/labring/lvscare:v5.1.2-rc3"
   for j in "${!NODE_IPS[@]}"; do
     if [[ "$(role_of "${NODE_LABELS[$j]}")" == "master" ]]; then
       MASTER_RS_ARGS+=$'        - --rs\n'
@@ -447,7 +440,14 @@ action_install_apiserver() {
     export ETCD_SERVERS="${etcd_servers}"
     render_template "/templates/systemd/kube-apiserver.service.tmpl" > "/tasks/rendered/${NODE_IPS[$idx]}-kube-apiserver.service"
     remote_copy "${idx}" "/tasks/rendered/${NODE_IPS[$idx]}-kube-apiserver.service" "/tmp/kube-apiserver.service"
-    remote_exec "${idx}" "sudo cp /tmp/kube-apiserver.service /etc/systemd/system/kube-apiserver.service && sudo systemctl daemon-reload && sudo systemctl enable --now kube-apiserver && systemctl is-active kube-apiserver >/dev/null && curl -k --max-time 10 https://127.0.0.1:6443/readyz >/dev/null"
+    remote_exec "${idx}" "sudo cp /tmp/kube-apiserver.service /etc/systemd/system/kube-apiserver.service && sudo systemctl daemon-reload && sudo systemctl enable --now kube-apiserver && systemctl is-active kube-apiserver >/dev/null"
+    # 循环检测10次,每次休眠5秒,检测kube-apiserver是否启动成功,检测命令 curl -k --max-time 10 https://127.0.0.1:6443/readyz >/dev/null
+    for i in {1..10}; do
+      if remote_exec "${idx}" "curl -k --max-time 10 https://127.0.0.1:6443/readyz >/dev/null"; then
+        break
+      fi
+      sleep 5
+    done
     printf 'apiserver-installed\n' > "/tasks/reports/apiserver-install-${NODE_IPS[$idx]}.txt"
   done
   write_current_summary "Installed kube-apiserver on master nodes"

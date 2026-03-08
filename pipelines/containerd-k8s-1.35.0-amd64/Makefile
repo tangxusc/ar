@@ -23,6 +23,11 @@ help:
 
 clean:
 	rm -rf .tmp
+	rm -rf /tmp/*
+	rm -rf /var/lib/ar/runc/*
+	rm -rf /var/lib/ar/tasks/*
+	docker image prune -f
+	df -h
 
 clean-package:
 	rm -rf .tmp

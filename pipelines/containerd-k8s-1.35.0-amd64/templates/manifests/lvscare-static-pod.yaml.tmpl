@@ -10,30 +10,22 @@ spec:
     - name: lvscare
       image: ${LVSCARE_POD_IMAGE}
       command:
-        - /usr/local/bin/lvscare
+        - lvscare
       args:
         - care
         - --vs
-        - ${HA_ENDPOINT#https://}
+        - 10.103.97.12:6443
 ${MASTER_RS_ARGS}
         - --health-path
         - /healthz
         - --interval
         - "5"
-        - --mode
-        - link
       securityContext:
         privileged: true
       volumeMounts:
         - name: modules
           mountPath: /lib/modules
-        - name: hostbin
-          mountPath: /usr/local/bin/lvscare
-          readOnly: true
   volumes:
     - name: modules
       hostPath:
         path: /lib/modules
-    - name: hostbin
-      hostPath:
-        path: /usr/local/bin/lvscare
