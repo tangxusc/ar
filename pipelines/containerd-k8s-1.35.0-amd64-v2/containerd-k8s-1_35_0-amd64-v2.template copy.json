@@ -153,36 +153,33 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-        "gen-ca-pem"
+        "install-etcd-{{$i}}"
     ]
   },
   {{end}}
+  {{range $i, $n := .nodes}}
   {
-    "name": "gen-ca-pem",
-    "description": "生成ca证书",
+    "name": "install-etcd-{{$i}}",
+    "description": "安装etcd",
     "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "bash",
+    "entrypoint": "sshpass",
     "args": [
-      "-lcx",
-      "/ar/scripts/gen-pem/gen-ca-pem.sh {{range $i, $n := .nodes}}{{if $i}},{{end}}{{$n.IP}}{{end}}"
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo sh /tmp/ar/scripts/install-etcd.sh"
     ],
-    "nodes": [
-        "gen-etcd-pem"
-    ]
-  },
-  {
-    "name": "gen-etcd-pem",
-    "description": "生成etcd证书",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "bash",
-    "args": [
-      "-lcx",
-      "/ar/scripts/gen-pem/gen-etcd-pem.sh {{range $i, $n := .nodes}}{{if $i}},{{end}}{{$n.IP}}{{end}}"
-    ],
+    "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
         "end"
     ]
   },
+  {{end}}
   {
     "name": "end",
     "image": "containerd-k8s-1_35_0-base:latest",

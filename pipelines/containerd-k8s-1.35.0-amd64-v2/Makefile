@@ -25,7 +25,8 @@ clean:
 	rm -rf /tmp/*
 	rm -rf /var/lib/ar/runc/*
 	rm -rf /var/lib/ar/tasks/*
-	docker image prune -f
+	rm -rf /var/lib/ar/data/*
+	# docker image prune -f
 	df -h
 
 build-step-images: package-artifacts
