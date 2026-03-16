@@ -164,25 +164,77 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/gen-pem/gen-ca-pem.sh {{range $i, $n := .nodes}}{{if $i}},{{end}}{{$n.IP}}{{end}}"
+      "/ar/scripts/gen-pem/gen-ca-pem.sh"
     ],
     "nodes": [
-        "gen-etcd-pem"
+        "gen-etcd-config"
     ]
   },
   {
-    "name": "gen-etcd-pem",
-    "description": "生成etcd证书",
+    "name": "gen-etcd-config",
+    "description": "生成etcd配置",
     "image": "containerd-k8s-1_35_0-base:latest",
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/gen-pem/gen-etcd-pem.sh {{range $i, $n := .nodes}}{{if $i}},{{end}}{{$n.IP}}{{end}}"
+      "/ar/scripts/gen-pem/gen-etcd-config.sh {{join "," (ipsByLabel .nodes "etcd" "true")}}"
     ],
     "nodes": [
-        "end"
+      {{if gt (len (ipsByLabel .nodes "etcd" "true")) 0}}
+        {{range $i, $ip := (ipsByLabel .nodes "etcd" "true")}}{{if $i}}, {{end}}"cpoy-etcd-certs-{{$ip}}"{{end}}
+      {{end}}
     ]
   },
+  {{range $i, $n := .nodes}}{{if labelHas $n.LabelsStr "etcd" "true"}}
+  {
+    "name": "cpoy-etcd-certs-{{$n.IP}}",
+    "description": "复制etcd证书",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "scp",
+      "-r",
+      "-P",
+      "{{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "/ar-data/pki/",
+      "{{$n.Username}}@{{$n.IP}}:/etc/kubernetes/pki/"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      {{if gt (len (ipsByLabel .nodes "etcd" "true")) 0}}
+        {{range $i, $ip := (ipsByLabel .nodes "etcd" "true")}}{{if $i}}, {{end}}"install-etcd-{{$ip}}"{{end}}
+      {{end}}
+    ]
+  },
+  {{end}}{{end}}
+  {{range $i, $n := .nodes}}{{if labelHas $n.LabelsStr "etcd" "true"}}
+  {
+    "name": "install-etcd-{{$n.IP}}",
+    "description": "安装etcd",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo sh /tmp/ar/scripts/install-etcd.sh"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      "end"
+    ]
+  },
+  {{end}}{{end}}
   {
     "name": "end",
     "image": "containerd-k8s-1_35_0-base:latest",

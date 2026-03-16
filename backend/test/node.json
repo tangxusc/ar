@@ -1,10 +1,14 @@
 [
     {
-        "ip": "172.19.16.8",
+        "ip": "172.19.16.14",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
         "labels": [
+            {
+                "key": "etcd",
+                "value": "true"
+            },
             {
                 "key": "role",
                 "value": "master"
@@ -20,11 +24,15 @@
         ]
     },
     {
-        "ip": "172.19.16.4",
+        "ip": "172.19.16.6",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
         "labels": [
+            {
+                "key": "etcd",
+                "value": "false"
+            },
             {
                 "key": "role",
                 "value": "worker"

@@ -155,11 +155,11 @@ func OrderStepsFromRunData(steps []PipelineStepState) ([]PipelineStepState, erro
 
 // NodeTemplateData 供模板渲染使用的单节点数据（与 RunNode 对应，字段首字母大写以便 template 访问）。
 type NodeTemplateData struct {
-	IP         string
-	Port       string
-	Username   string
-	Password   string
-	LabelsStr  string
+	IP        string
+	Port      string
+	Username  string
+	Password  string
+	LabelsStr string
 }
 
 // buildRenderContext 根据节点列表构建模板上下文，仅包含 .nodes 数组。模板中可用 {{.nodes}}、{{(index .nodes 0).IP}}、{{range .nodes}} 等。
@@ -214,10 +214,36 @@ func labelsString(labels []Label) string {
 	return b.String()
 }
 
+func labelHas(labelsStr, key, value string) bool {
+	if labelsStr == "" || key == "" {
+		return false
+	}
+	for _, label := range strings.Split(labelsStr, ",") {
+		parts := strings.SplitN(strings.TrimSpace(label), "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if parts[0] == key && parts[1] == value {
+			return true
+		}
+	}
+	return false
+}
+
 // templateFuncs 供 renderString 使用的模板函数，如 join、len 等。
 var templateFuncs = template.FuncMap{
-	"join": func(sep string, s []string) string { return strings.Join(s, sep) },
-	"len":  func(slice interface{}) int {
+	"join":     func(sep string, s []string) string { return strings.Join(s, sep) },
+	"labelHas": labelHas,
+	"ipsByLabel": func(nodes []NodeTemplateData, key, value string) []string {
+		ips := make([]string, 0, len(nodes))
+		for _, n := range nodes {
+			if labelHas(n.LabelsStr, key, value) {
+				ips = append(ips, n.IP)
+			}
+		}
+		return ips
+	},
+	"len": func(slice interface{}) int {
 		switch v := slice.(type) {
 		case []NodeTemplateData:
 			return len(v)
