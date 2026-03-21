@@ -23,6 +23,8 @@ build:
 		" \
 		main.go
 	sudo cp $(APP_NAME) /usr/bin/$(APP_NAME)
+	sudo chmod +x /usr/bin/$(APP_NAME)
+	rm -rf $(APP_NAME)
 
 
 .PHONY: run

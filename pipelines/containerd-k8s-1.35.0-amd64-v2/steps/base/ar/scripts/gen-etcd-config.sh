@@ -134,7 +134,8 @@ input_ips="$(printf '%s' "$raw_input" | tr -d '[:space:]')"
 [[ -f "$CFSSLJSON_BIN" ]] || die "missing cfssljson binary: $CFSSLJSON_BIN"
 chmod a+x "$CFSSL_BIN" "$CFSSLJSON_BIN"
 
-mkdir -p "$AR_DATA_ROOT" "$PKI_DIR"
+AR_ROOT_PKI_DIR="${AR_ROOT}/pki"
+mkdir -p "$AR_DATA_ROOT" "$PKI_DIR" "${AR_ROOT}" "${AR_ROOT_PKI_DIR}"
 
 declare -a ETCD_IPS=()
 declare -a ETCD_NAMES=()
@@ -187,6 +188,8 @@ echo "CERT_SAN_HOSTS: $san_hosts"
 
 echo "Generated hosts file: $HOSTS_FILE"
 cat "$HOSTS_FILE"
+cp "$HOSTS_FILE" "${AR_ROOT}/hosts"
+echo "Mirrored hosts file: ${AR_ROOT}/hosts"
 
 cd "$PEM_DIR"
 "$CFSSL_BIN" gencert \
@@ -199,6 +202,10 @@ cd "$PEM_DIR"
 
 echo "Generated certificates under: $PKI_DIR"
 ls -l "$PKI_DIR"
+cp "${PKI_DIR}/etcd.pem"     "${AR_ROOT_PKI_DIR}/etcd.pem"
+cp "${PKI_DIR}/etcd-key.pem" "${AR_ROOT_PKI_DIR}/etcd-key.pem"
+cp "${PKI_DIR}/etcd.csr"     "${AR_ROOT_PKI_DIR}/etcd.csr"
+echo "Mirrored certificates to: ${AR_ROOT_PKI_DIR}"
 
 for i in "${!ETCD_IPS[@]}"; do
   ip="${ETCD_IPS[$i]}"
@@ -230,4 +237,8 @@ for i in "${!ETCD_IPS[@]}"; do
     "$target_config"
 
   echo "Generated config: $target_config"
+  ar_root_node_dir="${AR_ROOT}/${ip}"
+  mkdir -p "$ar_root_node_dir"
+  cp "$target_config" "${ar_root_node_dir}/etcd.config.yml"
+  echo "Mirrored config: ${ar_root_node_dir}/etcd.config.yml"
 done

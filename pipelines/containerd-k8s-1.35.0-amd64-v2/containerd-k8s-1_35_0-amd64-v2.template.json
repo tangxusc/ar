@@ -177,7 +177,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/gen-pem/gen-etcd-config.sh {{join "," (ipsByLabel .nodes "etcd" "true")}}"
+      "/ar/scripts/gen-etcd-config.sh {{join "," (ipsByLabel .nodes "etcd" "true")}}"
     ],
     "nodes": [
       {{if gt (len (ipsByLabel .nodes "etcd" "true")) 0}}
@@ -188,26 +188,22 @@
   {{range $i, $n := .nodes}}{{if labelHas $n.LabelsStr "etcd" "true"}}
   {
     "name": "cpoy-etcd-certs-{{$n.IP}}",
-    "description": "复制etcd证书",
+    "description": "复制ar目录到目标主机",
     "image": "containerd-k8s-1_35_0-base:latest",
     "entrypoint": "sshpass",
     "args": [
       "-e",
-      "scp",
-      "-r",
-      "-P",
-      "{{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
-      "-o",
-      "StrictHostKeyChecking=no",
-      "-o",
-      "UserKnownHostsFile=/dev/null",
-      "/ar-data/pki/",
-      "{{$n.Username}}@{{$n.IP}}:/etc/kubernetes/pki/"
+      "rsync",
+      "-avz",
+      "-e",
+      "ssh -p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
+      "/ar/",
+      "{{$n.Username}}@{{$n.IP}}:/tmp/ar/"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-      {{if gt (len (ipsByLabel .nodes "etcd" "true")) 0}}
-        {{range $i, $ip := (ipsByLabel .nodes "etcd" "true")}}{{if $i}}, {{end}}"install-etcd-{{$ip}}"{{end}}
+      {{if gt (len (ipsByLabel $.nodes "etcd" "true")) 0}}
+        {{range $i, $ip := (ipsByLabel $.nodes "etcd" "true")}}{{if $i}}, {{end}}"install-etcd-{{$ip}}"{{end}}
       {{end}}
     ]
   },
@@ -227,7 +223,7 @@
       "-o",
       "UserKnownHostsFile=/dev/null",
       "{{$n.Username}}@{{$n.IP}}",
-      "sudo sh /tmp/ar/scripts/install-etcd.sh"
+      "sudo sh /tmp/ar/scripts/install-etcd.sh {{$n.IP}}"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [

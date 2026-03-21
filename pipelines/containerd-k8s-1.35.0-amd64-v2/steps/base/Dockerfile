@@ -36,6 +36,8 @@ RUN chmod a+x /usr/local/bin/cfssl /usr/local/bin/cfssljson
 
 COPY ar /ar
 
+RUN mkdir -p /ar/tar
+
 # 下载containerd 和cni-plugins 和crictl 和nerdctl
 RUN wget "https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz" -O /ar/tar/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz
 # https://github.com/containernetworking/plugins/releases/download/v1.9.0/cni-plugins-linux-amd64-v1.9.0.tgz
