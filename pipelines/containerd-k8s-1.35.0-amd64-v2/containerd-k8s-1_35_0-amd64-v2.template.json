@@ -27,14 +27,12 @@
     "entrypoint": "sshpass",
     "args": [
       "-e",
-      "scp",
-      "-o",
-      "StrictHostKeyChecking=no",
-      "-o",
-      "UserKnownHostsFile=/dev/null",
-      "-r",
+      "rsync",
+      "-avzc",
+      "-e",
+      "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
       "/ar/",
-      "{{$n.Username}}@{{$n.IP}}:/tmp/"
+      "{{$n.Username}}@{{$n.IP}}:/tmp/ar/"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
@@ -179,12 +177,10 @@
     "entrypoint": "sshpass",
     "args": [
       "-e",
-      "scp",
-      "-P {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
-      "-o",
-      "StrictHostKeyChecking=no",
-      "-o",
-      "UserKnownHostsFile=/dev/null",
+      "rsync",
+      "-avzc",
+      "-e",
+      "ssh -p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
       "/ar-data/confs/registry/hosts.toml",
       "{{$n.Username}}@{{$n.IP}}:/tmp/ar/confs/image-registry/hosts.toml"
     ],
