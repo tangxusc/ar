@@ -188,7 +188,7 @@
   {{range $i, $n := .nodes}}{{if labelHas $n.LabelsStr "etcd" "true"}}
   {
     "name": "cpoy-etcd-certs-{{$n.IP}}",
-    "description": "复制ar目录到目标主机",
+    "description": "复制生成的证书和配置到目标主机",
     "image": "containerd-k8s-1_35_0-base:latest",
     "entrypoint": "sshpass",
     "args": [
@@ -197,7 +197,7 @@
       "-avz",
       "-e",
       "ssh -p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
-      "/ar/",
+      "/ar-data/",
       "{{$n.Username}}@{{$n.IP}}:/tmp/ar/"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
