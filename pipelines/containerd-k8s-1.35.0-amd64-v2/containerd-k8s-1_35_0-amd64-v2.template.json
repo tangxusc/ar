@@ -177,7 +177,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/gen-etcd-config.sh {{join "," (ipsByLabel .nodes "etcd" "true")}}"
+      "/ar/scripts/gen-etcd-config.sh {{join "," (getNodeFieldValueByLabel .nodes "etcd" "true" "IntranetIP")}}"
     ],
     "nodes": [
       {{if gt (len (ipsByLabel .nodes "etcd" "true")) 0}}
@@ -223,7 +223,7 @@
       "-o",
       "UserKnownHostsFile=/dev/null",
       "{{$n.Username}}@{{$n.IP}}",
-      "sudo sh /tmp/ar/scripts/install-etcd.sh {{$n.IP}}"
+      "sudo sh /tmp/ar/scripts/install-etcd.sh {{$n.IntranetIP}}"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [

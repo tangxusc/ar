@@ -155,11 +155,12 @@ func OrderStepsFromRunData(steps []PipelineStepState) ([]PipelineStepState, erro
 
 // NodeTemplateData 供模板渲染使用的单节点数据（与 RunNode 对应，字段首字母大写以便 template 访问）。
 type NodeTemplateData struct {
-	IP        string
-	Port      string
-	Username  string
-	Password  string
-	LabelsStr string
+	IP         string
+	IntranetIP string
+	Port       string
+	Username   string
+	Password   string
+	LabelsStr  string
 }
 
 // buildRenderContext 根据节点列表构建模板上下文，仅包含 .nodes 数组。模板中可用 {{.nodes}}、{{(index .nodes 0).IP}}、{{range .nodes}} 等。
@@ -167,11 +168,12 @@ func buildRenderContext(nodes []RunNode) map[string]interface{} {
 	list := make([]NodeTemplateData, 0, len(nodes))
 	for _, n := range nodes {
 		list = append(list, NodeTemplateData{
-			IP:        n.IP,
-			Port:      n.Port,
-			Username:  n.Username,
-			Password:  n.Password,
-			LabelsStr: labelsString(n.Labels),
+			IP:         n.IP,
+			IntranetIP: n.IntranetIP,
+			Port:       n.Port,
+			Username:   n.Username,
+			Password:   n.Password,
+			LabelsStr:  labelsString(n.Labels),
 		})
 	}
 	return map[string]interface{}{"nodes": list}
@@ -230,6 +232,26 @@ func labelHas(labelsStr, key, value string) bool {
 	return false
 }
 
+// getNodeField 根据字段名获取 NodeTemplateData 对应字段的值（大小写不敏感）。
+func getNodeField(n NodeTemplateData, fieldName string) string {
+	switch strings.ToLower(fieldName) {
+	case "ip":
+		return n.IP
+	case "intranetip", "intranet_ip":
+		return n.IntranetIP
+	case "port":
+		return n.Port
+	case "username":
+		return n.Username
+	case "password":
+		return n.Password
+	case "labelsstr":
+		return n.LabelsStr
+	default:
+		return ""
+	}
+}
+
 // templateFuncs 供 renderString 使用的模板函数，如 join、len 等。
 var templateFuncs = template.FuncMap{
 	"join":     func(sep string, s []string) string { return strings.Join(s, sep) },
@@ -242,6 +264,15 @@ var templateFuncs = template.FuncMap{
 			}
 		}
 		return ips
+	},
+	"getNodeFieldValueByLabel": func(nodes []NodeTemplateData, labelKey, labelValue, fieldName string) []string {
+		result := make([]string, 0, len(nodes))
+		for _, n := range nodes {
+			if labelHas(n.LabelsStr, labelKey, labelValue) {
+				result = append(result, getNodeField(n, fieldName))
+			}
+		}
+		return result
 	},
 	"len": func(slice interface{}) int {
 		switch v := slice.(type) {

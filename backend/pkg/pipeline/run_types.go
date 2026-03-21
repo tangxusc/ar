@@ -4,11 +4,12 @@ import "encoding/json"
 
 // RunNode 表示执行流水线时的一台节点（与 design/节点管理.md 一致）。
 type RunNode struct {
-	IP       string  `json:"ip"`
-	Port     string  `json:"port,omitempty"`
-	Username string  `json:"username"`
-	Password string  `json:"password"`
-	Labels   []Label `json:"labels,omitempty"`
+	IP         string  `json:"ip"`
+	IntranetIP string  `json:"intranet_ip,omitempty"`
+	Port       string  `json:"port,omitempty"`
+	Username   string  `json:"username"`
+	Password   string  `json:"password"`
+	Labels     []Label `json:"labels,omitempty"`
 }
 
 // Label 标签键值。
@@ -57,11 +58,23 @@ func ParseNodesFile(data []byte) ([]RunNode, error) {
 	// 尝试包装格式
 	var wrapped NodesFile
 	if err := json.Unmarshal(data, &wrapped); err == nil && len(wrapped.Nodes) > 0 {
+		// IntranetIP 默认值：未设置时回退到 IP
+		for i := range wrapped.Nodes {
+			if wrapped.Nodes[i].IntranetIP == "" {
+				wrapped.Nodes[i].IntranetIP = wrapped.Nodes[i].IP
+			}
+		}
 		return wrapped.Nodes, nil
 	}
 	// 尝试直接数组
 	if err := json.Unmarshal(data, &nodes); err != nil {
 		return nil, err
+	}
+	// IntranetIP 默认值：未设置时回退到 IP
+	for i := range nodes {
+		if nodes[i].IntranetIP == "" {
+			nodes[i].IntranetIP = nodes[i].IP
+		}
 	}
 	return nodes, nil
 }
