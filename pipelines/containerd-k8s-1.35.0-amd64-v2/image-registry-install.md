@@ -3,6 +3,7 @@
 在containerd安装好之后,需要安装镜像仓库,用以在内网环境各节点拉取镜像
 在makefile build中增加命令,用于使用skopeo 下载镜像到steps/base/ar/images目录下,名称为镜像名称加版本号，格式为oci
 在前序步骤中,这个文件会被拷贝至目标节点的/tmp/ar/images目录下
+registry的密码我已经生成在了htpasswd文件中
 
 1. 根据 节点标签为registry=true的节点,渲染/ar/confs/image-registry/hosts.toml,渲染后存储在/ar-data/confs/registry/hosts.toml
 2. 复制/ar-data/confs/registry/hosts.toml到所有节点的/tmp/ar/confs/image-registry/hosts.toml
@@ -16,3 +17,6 @@
 在所有节点上执行
 4.1 复制/tmp/ar/confs/image-registry/hosts.toml 到 /etc/containerd/cert.d/_default/hosts.html
 4.2 重启containerd服务
+
+在需求完成后,在/home/ubuntu/ar/pipelines/containerd-k8s-1.35.0-amd64-v2目录下,使用sudo make test测试
+node.json中的节点已经做了免密登录,在安装完成后需要ssh到目标主机中验证是否安装成功
