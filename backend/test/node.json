@@ -1,6 +1,7 @@
 [
     {
-        "ip": "172.19.16.14",
+        "ip": "43.135.19.251",
+        "intranet_ip": "172.19.16.10",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
@@ -20,11 +21,16 @@
             {
                 "key": "zone",
                 "value": "shanghai"
+            },
+            {
+                "key": "registry",
+                "value": "true"
             }
         ]
     },
     {
-        "ip": "172.19.16.6",
+        "ip": "43.132.151.180",
+        "intranet_ip": "172.19.16.14",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
