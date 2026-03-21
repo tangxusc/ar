@@ -165,7 +165,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/render-image-registry-hosts.sh {{join \",\" (getNodeFieldValueByLabel .nodes \"registry\" \"true\" \"IntranetIP\")}}"
+      "/ar/scripts/render-image-registry-hosts.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IntranetIP")}}"
     ],
     "nodes": [
       {{range $i, $n := .nodes}}{{if $i}}, {{end}}"distribute-registry-hosts-{{$i}}"{{end}}

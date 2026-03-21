@@ -8,6 +8,7 @@ ARG CONTAINERD_VERSION=2.2.1
 ARG CNI_PLUGINS_VERSION=1.9.0
 ARG CRICTL_VERSION=1.35.0
 ARG NERDCTL_VERSION=2.2.1
+ARG RUNC_VERSION=1.2.6
 # k8s版本
 ARG KUBERNETES_SERVER_VERSION=1.35.0
 
@@ -46,6 +47,8 @@ RUN wget "https://github.com/containernetworking/plugins/releases/download/v${CN
 RUN wget "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz" -O /ar/tar/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz
 # https://github.com/containerd/nerdctl/releases/download/v2.2.1/nerdctl-2.2.1-linux-amd64.tar.gz
 RUN wget "https://github.com/containerd/nerdctl/releases/download/v${NERDCTL_VERSION}/nerdctl-${NERDCTL_VERSION}-linux-amd64.tar.gz" -O /ar/tar/nerdctl-${NERDCTL_VERSION}-linux-amd64.tar.gz
+# https://github.com/opencontainers/runc/releases/download/v1.2.6/runc.amd64
+RUN wget "https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.amd64" -O /ar/tar/runc.amd64 && chmod 0755 /ar/tar/runc.amd64
 
 # 下载etcd
 RUN wget "https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz" -O /ar/tar/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz

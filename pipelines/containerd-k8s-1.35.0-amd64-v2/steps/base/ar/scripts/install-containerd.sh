@@ -2,7 +2,14 @@
 set -e
 
 sudo mkdir -p /etc/cni/net.d /opt/cni/bin &&sudo tar xf /tmp/ar/tar/cni-plugins-linux-amd64-v*.tgz -C /opt/cni/bin/ 
-sudo tar -xzf /tmp/ar/tar/containerd-*-linux-amd64.tar.gz -C /usr/local/ 
+sudo tar -xzf /tmp/ar/tar/containerd-*-linux-amd64.tar.gz -C /usr/local/
+# 安装runc
+if [ -f /tmp/ar/tar/runc.amd64 ]; then
+  sudo install -m 0755 /tmp/ar/tar/runc.amd64 /usr/local/sbin/runc
+  echo "Installed runc: $(/usr/local/sbin/runc --version || true)"
+elif ! command -v runc >/dev/null 2>&1; then
+  echo "WARNING: runc binary not found, containerd may not work correctly"
+fi
 sudo cp /tmp/ar/service/containerd.service /etc/systemd/system/containerd.service 
 sudo mkdir -p /etc/containerd
 sudo containerd config default | sudo tee /etc/containerd/config.toml
