@@ -153,7 +153,121 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-        "gen-ca-pem"
+      {{if gt (len (ipsByLabel $.nodes "registry" "true")) 0}}"render-registry-hosts"{{else}}"gen-ca-pem"{{end}}
+    ]
+  },
+  {{end}}
+  {{if gt (len (ipsByLabel .nodes "registry" "true")) 0}}
+  {
+    "name": "render-registry-hosts",
+    "description": "渲染镜像仓库 hosts.toml",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/render-image-registry-hosts.sh {{join \",\" (getNodeFieldValueByLabel .nodes \"registry\" \"true\" \"IntranetIP\")}}"
+    ],
+    "nodes": [
+      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"distribute-registry-hosts-{{$i}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}
+  {
+    "name": "distribute-registry-hosts-{{$i}}",
+    "description": "分发镜像仓库 hosts.toml",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "scp",
+      "-P {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "/ar-data/confs/registry/hosts.toml",
+      "{{$n.Username}}@{{$n.IP}}:/tmp/ar/confs/image-registry/hosts.toml"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      "registry-hosts-distributed"
+    ]
+  },
+  {{end}}
+  {
+    "name": "registry-hosts-distributed",
+    "description": "镜像仓库 hosts.toml 分发完成",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "echo",
+    "args": ["registry-hosts-distributed"],
+    "nodes": [
+      {{range $i, $ip := (ipsByLabel .nodes "registry" "true")}}{{if $i}}, {{end}}"install-image-registry-{{$ip}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}{{if labelHas $n.LabelsStr "registry" "true"}}
+  {
+    "name": "install-image-registry-{{$n.IP}}",
+    "description": "安装镜像仓库",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/image-registry-install.sh"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      "registry-installed"
+    ]
+  },
+  {{end}}{{end}}
+  {
+    "name": "registry-installed",
+    "description": "镜像仓库安装完成",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "echo",
+    "args": ["registry-installed"],
+    "nodes": [
+      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"configure-containerd-registry-{{$i}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}
+  {
+    "name": "configure-containerd-registry-{{$i}}",
+    "description": "配置 containerd registry mirror",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo mkdir -p /etc/containerd/certs.d/_default && sudo cp /tmp/ar/confs/image-registry/hosts.toml /etc/containerd/certs.d/_default/hosts.toml && sudo systemctl restart containerd"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      "registry-configured"
+    ]
+  },
+  {{end}}
+  {
+    "name": "registry-configured",
+    "description": "containerd registry mirror 配置完成",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "echo",
+    "args": ["registry-configured"],
+    "nodes": [
+      "gen-ca-pem"
     ]
   },
   {{end}}
@@ -181,7 +295,7 @@
     ],
     "nodes": [
       {{if gt (len (ipsByLabel .nodes "etcd" "true")) 0}}
-        {{range $i, $ip := (ipsByLabel .nodes "etcd" "true")}}{{if $i}}, {{end}}"cpoy-etcd-certs-{{$ip}}"{{end}}
+        {{range $i, $ip := (ipsByLabel .nodes "etcd" "true")}}{{if $i}}, {{end}}"copy-etcd-certs-{{$ip}}"{{end}}
       {{end}}
     ]
   },
