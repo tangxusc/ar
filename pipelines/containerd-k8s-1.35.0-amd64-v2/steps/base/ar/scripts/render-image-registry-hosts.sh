@@ -19,6 +19,9 @@ out_dir="/ar-data/confs/registry"
 out_file="${out_dir}/hosts.toml"
 mkdir -p "${out_dir}"
 
+auth_username="tanxtanx"
+auth_password="tanxtanx"
+
 tmp="$(mktemp)"
 trap 'rm -f "${tmp}"' EXIT
 
@@ -28,6 +31,7 @@ for ip in "${ips[@]}"; do
   cat >> "${tmp}" <<EOF
 [host."http://${ip}:5000"]
   capabilities = ["pull", "resolve"]
+  auth = { username = "${auth_username}", password = "${auth_password}" }
   skip_verify = true
 
 EOF
@@ -41,4 +45,3 @@ fi
 mv "${tmp}" "${out_file}"
 echo "Rendered: ${out_file}"
 cat "${out_file}"
-
