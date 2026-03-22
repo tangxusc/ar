@@ -76,6 +76,6 @@ sudo nerdctl -n k8s.io run -d \
   --net host \
   -v /lib/modules:/lib/modules:ro \
   "${LVSCARE_IMAGE}" \
-  care --vs "${LVSCARE_VIP}" ${RS_ARGS} --interval 5 >/dev/null
+  care --mode link --iface lvscare --vs "${LVSCARE_VIP}" ${RS_ARGS} --interval 5 >/dev/null
 
 echo "lvs-care 已启动: VIP=${LVSCARE_VIP}, masters=${MASTER_IPS}"
