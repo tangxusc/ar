@@ -36,16 +36,8 @@
         "password": "Tcdn@2007",
         "labels": [
             {
-                "key": "etcd",
-                "value": "false"
-            },
-            {
                 "key": "role",
                 "value": "worker"
-            },
-            {
-                "key": "env",
-                "value": "dev"
             },
             {
                 "key": "zone",

@@ -36,4 +36,6 @@ go.work.sum
 # Offline artifact cache (containerd-k8s-1.35.0-amd64)
 pipelines/containerd-k8s-1.35.0-amd64/.tmp/
 pipelines/containerd-k8s-1.35.0-amd64/steps/base/artifacts/
-.tar
+
+# Offline images (containerd-k8s-1.35.0-amd64-v2)
+pipelines/containerd-k8s-1.35.0-amd64-v2/steps/base/ar/images/*.tar
