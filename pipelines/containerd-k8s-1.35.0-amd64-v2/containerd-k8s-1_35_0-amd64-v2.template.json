@@ -186,20 +186,10 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-      "registry-hosts-distributed"
+      {{range $j, $ip := (ipsByLabel $.nodes "registry" "true")}}{{if $j}}, {{end}}"install-image-registry-{{$ip}}"{{end}}
     ]
   },
   {{end}}
-  {
-    "name": "registry-hosts-distributed",
-    "description": "镜像仓库 hosts.toml 分发完成",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "echo",
-    "args": ["registry-hosts-distributed"],
-    "nodes": [
-      {{range $i, $ip := (ipsByLabel .nodes "registry" "true")}}{{if $i}}, {{end}}"install-image-registry-{{$ip}}"{{end}}
-    ]
-  },
   {{range $i, $n := .nodes}}{{if labelHas $n.LabelsStr "registry" "true"}}
   {
     "name": "install-image-registry-{{$n.IP}}",
@@ -219,20 +209,10 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-      "registry-installed"
+      {{range $j, $m := $.nodes}}{{if $j}}, {{end}}"configure-containerd-registry-{{$j}}"{{end}}
     ]
   },
   {{end}}{{end}}
-  {
-    "name": "registry-installed",
-    "description": "镜像仓库安装完成",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "echo",
-    "args": ["registry-installed"],
-    "nodes": [
-      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"configure-containerd-registry-{{$i}}"{{end}}
-    ]
-  },
   {{range $i, $n := .nodes}}
   {
     "name": "configure-containerd-registry-{{$i}}",
@@ -252,20 +232,10 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-      "registry-configured"
+      {{range $j, $m := $.nodes}}{{if $j}}, {{end}}"install-lvs-care-{{$j}}"{{end}}
     ]
   },
   {{end}}
-  {
-    "name": "registry-configured",
-    "description": "containerd registry mirror 配置完成",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "echo",
-    "args": ["registry-configured"],
-    "nodes": [
-      {{range $i, $n := $.nodes}}{{if $i}}, {{end}}"install-lvs-care-{{$i}}"{{end}}
-    ]
-  },
   {{end}}
   {{range $i, $n := .nodes}}
   {
@@ -286,20 +256,10 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-      "lvs-care-installed"
-    ]
-  },
-  {{end}}
-  {
-    "name": "lvs-care-installed",
-    "description": "lvs-care安装完成",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "echo",
-    "args": ["lvs-care-installed"],
-    "nodes": [
       "gen-ca-pem"
     ]
   },
+  {{end}}
   {
     "name": "gen-ca-pem",
     "description": "生成ca证书",
