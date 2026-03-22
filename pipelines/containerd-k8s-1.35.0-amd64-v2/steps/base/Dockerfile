@@ -54,4 +54,4 @@ RUN wget "https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSI
 RUN wget "https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz" -O /ar/tar/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz
 
 # 下载k8s
-# RUN wget "https://dl.k8s.io/release/v${KUBERNETES_SERVER_VERSION}/kubernetes-server-linux-amd64.tar.gz" -O /ar/tar/kubernetes-server-linux-amd64.tar.gz
+RUN wget "https://dl.k8s.io/release/v${KUBERNETES_SERVER_VERSION}/kubernetes-server-linux-amd64.tar.gz" -O /ar/tar/kubernetes-server-linux-amd64.tar.gz
