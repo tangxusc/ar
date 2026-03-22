@@ -1,9 +1,9 @@
-FROM alpine:3.20
+FROM ubuntu:22.04
 
 # 参数 cfssl版本
 ARG CFSSL_VERSION=1.6.5
 ARG CFSSLJSON_VERSION=1.6.5
-# 
+#
 ARG CONTAINERD_VERSION=2.2.1
 ARG CNI_PLUGINS_VERSION=1.9.0
 ARG CRICTL_VERSION=1.35.0
@@ -15,21 +15,27 @@ ARG KUBERNETES_SERVER_VERSION=1.35.0
 # etcd版本
 ARG ETCD_VERSION=3.6.8
 
-RUN apk add --no-cache \
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
     coreutils \
     curl \
-    gettext-envsubst \
+    gettext-base \
     jq \
     net-tools \
     openssh-client \
+    openssl \
     rsync \
     skopeo \
     sshpass \
     tar \
     wget \
-    yq 
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 yq
+RUN wget "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -O /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+
 # 下载cfssl 和cfssljson
 RUN wget "https://github.com/cloudflare/cfssl/releases/download/v${CFSSL_VERSION}/cfssl_${CFSSL_VERSION}_linux_amd64" -O /usr/local/bin/cfssl
 RUN wget "https://github.com/cloudflare/cfssl/releases/download/v${CFSSL_VERSION}/cfssljson_${CFSSL_VERSION}_linux_amd64" -O /usr/local/bin/cfssljson

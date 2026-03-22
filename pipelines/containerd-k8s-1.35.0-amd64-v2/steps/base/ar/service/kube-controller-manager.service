@@ -1,0 +1,29 @@
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/kubernetes/kubernetes
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/kube-controller-manager \
+  --v=2 \
+  --bind-address=0.0.0.0 \
+  --leader-elect=true \
+  --kubeconfig=/etc/kubernetes/controller-manager.kubeconfig \
+  --cluster-signing-cert-file=/etc/kubernetes/pki/ca.pem \
+  --cluster-signing-key-file=/etc/kubernetes/pki/ca-key.pem \
+  --root-ca-file=/etc/kubernetes/pki/ca.pem \
+  --service-account-private-key-file=/etc/kubernetes/pki/sa.key \
+  --use-service-account-credentials=true \
+  --node-monitor-grace-period=40s \
+  --node-monitor-period=5s \
+  --controllers=*,bootstrapsigner,tokencleaner \
+  --service-cluster-ip-range=10.96.0.0/12 \
+  --cluster-cidr=10.244.0.0/16 \
+  --allocate-node-cidrs=true \
+  --node-cidr-mask-size-ipv4=24 \
+  --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.pem
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

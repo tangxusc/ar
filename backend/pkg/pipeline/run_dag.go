@@ -274,11 +274,31 @@ var templateFuncs = template.FuncMap{
 		}
 		return result
 	},
+	"indicesByLabel": func(nodes []NodeTemplateData, key, value string) []int {
+		indices := make([]int, 0, len(nodes))
+		for i, n := range nodes {
+			if labelHas(n.LabelsStr, key, value) {
+				indices = append(indices, i)
+			}
+		}
+		return indices
+	},
+	"indicesByNotLabel": func(nodes []NodeTemplateData, key, value string) []int {
+		indices := make([]int, 0, len(nodes))
+		for i, n := range nodes {
+			if !labelHas(n.LabelsStr, key, value) {
+				indices = append(indices, i)
+			}
+		}
+		return indices
+	},
 	"len": func(slice interface{}) int {
 		switch v := slice.(type) {
 		case []NodeTemplateData:
 			return len(v)
 		case []string:
+			return len(v)
+		case []int:
 			return len(v)
 		default:
 			return 0

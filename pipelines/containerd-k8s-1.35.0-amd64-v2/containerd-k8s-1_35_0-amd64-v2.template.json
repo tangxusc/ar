@@ -330,10 +330,111 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-      "end"
+      "gen-k8s-certs"
     ]
   },
   {{end}}{{end}}
+  {
+    "name": "gen-k8s-certs",
+    "description": "生成K8s组件证书和kubeconfig",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/generate-certs.sh {{join "," (getNodeFieldValueByLabel .nodes "role" "master" "IntranetIP")}} {{join "," (getNodeFieldValueByLabel .nodes "etcd" "true" "IntranetIP")}}"
+    ],
+    "nodes": [
+      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"copy-k8s-certs-{{$i}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}
+  {
+    "name": "copy-k8s-certs-{{$i}}",
+    "description": "拷贝K8s证书和kubeconfig到节点{{$n.IP}}",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "rsync",
+      "-avzc",
+      "-e",
+      "ssh -p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
+      "/ar-data/",
+      "{{$n.Username}}@{{$n.IP}}:/tmp/ar/"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      {{if labelHas $n.LabelsStr "role" "master"}}"install-master-{{$i}}"{{else}}{{range $j, $idx := (indicesByLabel $.nodes "role" "master")}}{{if $j}}, {{end}}"install-master-{{$idx}}"{{end}}{{end}}
+    ]
+  },
+  {{end}}
+  {{range $i, $n := .nodes}}{{if labelHas $n.LabelsStr "role" "master"}}
+  {
+    "name": "install-master-{{$i}}",
+    "description": "安装K8s master组件 {{$n.IP}}",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/install-master.sh {{$n.IntranetIP}} {{join "," (getNodeFieldValueByLabel $.nodes "etcd" "true" "IntranetIP")}} {{$n.LabelsStr}} {{if eq $i 0}}true{{else}}false{{end}}"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      {{range $j, $idx := (indicesByNotLabel $.nodes "role" "master")}}{{if $j}}, {{end}}"install-node-{{$idx}}"{{end}}{{if gt (len (indicesByNotLabel $.nodes "role" "master")) 0}}, {{end}}"apply-node-labels"
+    ]
+  },
+  {{end}}{{end}}
+  {{range $i, $n := .nodes}}{{if not (labelHas $n.LabelsStr "role" "master")}}
+  {
+    "name": "install-node-{{$i}}",
+    "description": "安装K8s node组件 {{$n.IP}}",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/install-node.sh {{$n.IntranetIP}} {{$n.LabelsStr}}"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      "apply-node-labels"
+    ]
+  },
+  {{end}}{{end}}
+  {
+    "name": "apply-node-labels",
+    "description": "在master上为所有节点应用labels",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{with index .nodes 0}}{{if .Port}}{{.Port}}{{else}}22{{end}}{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{with index .nodes 0}}{{.Username}}@{{.IP}}{{end}}",
+      "sudo bash /tmp/ar/scripts/apply-labels.sh {{range $i, $n := .nodes}}{{if $i}} {{end}}{{$n.IntranetIP}}:{{$n.LabelsStr}}{{end}}"
+    ],
+    "env": ["SSHPASS={{with index .nodes 0}}{{.Password}}{{end}}"],
+    "nodes": [
+      "end"
+    ]
+  },
   {
     "name": "end",
     "image": "containerd-k8s-1_35_0-base:latest",
