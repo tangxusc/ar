@@ -5,6 +5,7 @@ PIPELINE_TEMPLATE := containerd-k8s-1_35_0-amd64-v2.template.json
 PIPELINE_IMAGE := pipeline-$(PIPELINE_NAME):latest
 PIPELINE_ROOT := $(CURDIR)
 NODE_FILE ?= testdata/node.json
+ARGS_FILE ?= testdata/args.json
 
 .PHONY: help clean clean-package prepare-dirs download-artifacts download-runtime-artifacts download-kubernetes-artifacts download-pki-artifacts download-cni-artifacts download-addon-artifacts verify-artifacts package-artifacts build-step-images install-local-pipeline build-pipeline-image build dist test
 
@@ -19,7 +20,7 @@ help:
 	@echo "  build-pipeline-image        Build distributable pipeline image"
 	@echo "  build                       Prepare local runnable pipeline"
 	@echo "  dist                        Build distributable pipeline image"
-	@echo "  test                        Run pipeline with NODE_FILE=$(NODE_FILE)"
+	@echo "  test                        Run pipeline with NODE_FILE=$(NODE_FILE) ARGS_FILE=$(ARGS_FILE)"
 
 clean:
 	rm -rf /tmp/*
@@ -51,4 +52,4 @@ build-pipeline-image: build-step-images
 build: build-step-images install-local-pipeline
 
 test: build
-	allrun pipeline run -p $(PIPELINE_NAME) -n "$(NODE_FILE)"
+	allrun pipeline run -p $(PIPELINE_NAME) -n "$(NODE_FILE)" -a "$(ARGS_FILE)"
