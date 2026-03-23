@@ -10,8 +10,9 @@ set -euo pipefail
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-MASTER_IPS="${1:?用法: $0 <master_ips> <etcd_ips>}"
-ETCD_IPS="${2:?用法: $0 <master_ips> <etcd_ips>}"
+MASTER_IPS="${1:?用法: $0 <master_ips> <etcd_ips> [vip]}"
+ETCD_IPS="${2:?用法: $0 <master_ips> <etcd_ips> [vip]}"
+LVSCARE_VIP="${3:-10.103.97.12}"
 
 PKI_DIR="/ar-data/pki"
 PEM_DIR="/ar/scripts/gen-pem"
@@ -30,7 +31,7 @@ cd "$PEM_DIR"
 
 # --- 1. apiserver 证书 ---
 APISERVER_SAN="kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster.local"
-APISERVER_SAN="${APISERVER_SAN},127.0.0.1,10.96.0.1,10.103.97.12"
+APISERVER_SAN="${APISERVER_SAN},127.0.0.1,10.96.0.1,${LVSCARE_VIP}"
 APISERVER_SAN="${APISERVER_SAN},${MASTER_IPS}"
 
 echo "生成 apiserver 证书, SAN: ${APISERVER_SAN}"
@@ -114,7 +115,7 @@ if ! command -v kubectl >/dev/null 2>&1; then
 fi
 
 # --- 11. 生成 kubeconfig 文件 ---
-APISERVER_URL="https://10.103.97.12:6443"
+APISERVER_URL="https://${LVSCARE_VIP}:6443"
 KUBECONFIG_DIR="/ar-data/kubeconfig"
 mkdir -p "$KUBECONFIG_DIR"
 

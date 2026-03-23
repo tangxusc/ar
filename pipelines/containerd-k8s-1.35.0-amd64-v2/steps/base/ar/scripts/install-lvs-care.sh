@@ -9,10 +9,12 @@ die() {
 LVSCARE_ARCHIVE="/tmp/ar/images/lvs-care.tar"
 LVSCARE_IMAGE="ghcr.io/labring/lvscare:v5.1.2-rc3"
 LVSCARE_CONTAINER="lvscare"
-LVSCARE_VIP="10.103.97.12:6443"
+# 第二个参数：VIP 地址（不含端口），默认 10.103.97.12
+LVSCARE_VIP_HOST="${2:-10.103.97.12}"
+LVSCARE_VIP="${LVSCARE_VIP_HOST}:6443"
 
 # 第一个参数：逗号分隔的 master IP 列表
-MASTER_IPS="${1:?用法: install-lvs-care.sh <master_ip1,master_ip2,...>}"
+MASTER_IPS="${1:?用法: install-lvs-care.sh <master_ip1,master_ip2,...> [vip]}"
 
 echo "安装 lvs-care (VIP=${LVSCARE_VIP}, masters=${MASTER_IPS})"
 

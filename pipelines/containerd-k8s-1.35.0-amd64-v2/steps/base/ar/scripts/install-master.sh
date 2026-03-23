@@ -132,8 +132,17 @@ sudo systemctl status kube-scheduler --no-pager || true
 # --- 8. 应用 bootstrap RBAC (仅第一个 master) ---
 if [ "${IS_FIRST_MASTER}" = "true" ]; then
   echo "--- 步骤 8: 应用 bootstrap RBAC ---"
-  sudo kubectl --kubeconfig=/etc/kubernetes/admin.kubeconfig apply -f /tmp/ar/bootstrap-secret.yaml
-  echo "Bootstrap RBAC 已应用"
+  for i in $(seq 1 10); do
+    if sudo kubectl --kubeconfig=/etc/kubernetes/admin.kubeconfig apply -f /tmp/ar/bootstrap-secret.yaml; then
+      echo "Bootstrap RBAC 已应用"
+      break
+    fi
+    echo "apply 失败，1秒后重试... (${i}/10)"
+    sleep 1
+    if [ "${i}" -eq 10 ]; then
+      die "Bootstrap RBAC 应用失败，已重试 10 次"
+    fi
+  done
 fi
 
 # --- 9. 安装 kubelet ---

@@ -19,8 +19,8 @@ out_dir="/ar-data/confs/registry"
 out_file="${out_dir}/hosts.toml"
 mkdir -p "${out_dir}"
 
-auth_username="tanxtanx"
-auth_password="tanxtanx"
+auth_username="${2:-tanxtanx}"
+auth_password="${3:-tanxtanx}"
 
 tmp="$(mktemp)"
 trap 'rm -f "${tmp}"' EXIT

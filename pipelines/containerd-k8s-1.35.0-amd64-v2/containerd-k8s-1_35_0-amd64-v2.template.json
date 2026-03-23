@@ -163,7 +163,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/render-image-registry-hosts.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IntranetIP")}}"
+      "/ar/scripts/render-image-registry-hosts.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IntranetIP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
     ],
     "nodes": [
       {{range $i, $n := .nodes}}{{if $i}}, {{end}}"distribute-registry-hosts-{{$i}}"{{end}}
@@ -252,7 +252,7 @@
       "-o",
       "UserKnownHostsFile=/dev/null",
       "{{$n.Username}}@{{$n.IP}}",
-      "sudo bash /tmp/ar/scripts/install-lvs-care.sh {{join "," (getNodeFieldValueByLabel $.nodes "role" "master" "IntranetIP")}}"
+      "sudo bash /tmp/ar/scripts/install-lvs-care.sh {{join "," (getNodeFieldValueByLabel $.nodes "role" "master" "IntranetIP")}} {{arg $.args "lvs_care_vip"}}"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
@@ -341,7 +341,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/generate-certs.sh {{join "," (getNodeFieldValueByLabel .nodes "role" "master" "IntranetIP")}} {{join "," (getNodeFieldValueByLabel .nodes "etcd" "true" "IntranetIP")}}"
+      "/ar/scripts/generate-certs.sh {{join "," (getNodeFieldValueByLabel .nodes "role" "master" "IntranetIP")}} {{join "," (getNodeFieldValueByLabel .nodes "etcd" "true" "IntranetIP")}} {{arg .args "lvs_care_vip"}}"
     ],
     "nodes": [
       {{range $i, $n := .nodes}}{{if $i}}, {{end}}"copy-k8s-certs-{{$i}}"{{end}}

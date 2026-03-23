@@ -1,7 +1,7 @@
 [
     {
-        "ip": "43.154.150.241",
-        "intranet_ip": "172.19.16.11",
+        "ip": "43.154.180.26",
+        "intranet_ip": "172.19.16.5",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
@@ -29,8 +29,8 @@
         ]
     },
     {
-        "ip": "129.226.172.192",
-        "intranet_ip": "172.19.16.13",
+        "ip": "43.129.240.248",
+        "intranet_ip": "172.19.16.8",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
