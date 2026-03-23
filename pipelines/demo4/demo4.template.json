@@ -1,0 +1,15 @@
+[
+  {
+    "name": "show-args",
+    "image": "alpine:latest",
+    "entrypoint": "echo",
+    "args": ["version={{index .args `version`}} registry={{index .args `registry`}} env={{index .args `env`}}"],
+    "nodes": ["show-node"]
+  },
+  {
+    "name": "show-node",
+    "image": "alpine:latest",
+    "entrypoint": "echo",
+    "args": ["node-ip={{(index .nodes 0).IP}} arg-via-func={{arg .args `version`}}"]
+  }
+]

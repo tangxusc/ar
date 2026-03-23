@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -71,7 +72,7 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	pipelineCmd.AddCommand(loadCmd)
 
 	// ar run：按 design/执行流水线流程.md 使用 OCI 规范执行流水线（不依赖 podman）
-	var runPipelineName, runNodesPath string
+	var runPipelineName, runNodesPath, runArgsPath string
 	runCmd := &cobra.Command{
 		Use:   "run",
 		Short: "执行流水线（按 DAG 顺序运行 OCI 容器）",
@@ -86,7 +87,7 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 				logrus.Error("pipeline run: 未指定 -n 节点列表路径")
 				return fmt.Errorf("请通过 -n 指定节点列表 JSON 文件路径")
 			}
-			logrus.Debugf("pipeline run: pipeline=%s nodes=%s", runPipelineName, runNodesPath)
+			logrus.Debugf("pipeline run: pipeline=%s nodes=%s args=%s", runPipelineName, runNodesPath, runArgsPath)
 			data, err := os.ReadFile(runNodesPath)
 			if err != nil {
 				logrus.Errorf("pipeline run: 读取节点文件失败 %s: %v", runNodesPath, err)
@@ -98,9 +99,24 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 				return fmt.Errorf("解析节点 JSON 失败: %w", err)
 			}
 			logrus.Debugf("pipeline run: 解析到 %d 个节点", len(nodes))
+
+			var runArgs map[string]interface{}
+			if runArgsPath != "" {
+				argsData, err := os.ReadFile(runArgsPath)
+				if err != nil {
+					logrus.Errorf("pipeline run: 读取参数文件失败 %s: %v", runArgsPath, err)
+					return fmt.Errorf("读取参数文件失败 %s: %w", runArgsPath, err)
+				}
+				if err := json.Unmarshal(argsData, &runArgs); err != nil {
+					logrus.Errorf("pipeline run: 解析参数 JSON 失败 %s: %v", runArgsPath, err)
+					return fmt.Errorf("解析参数 JSON 失败 %s: %w", runArgsPath, err)
+				}
+				logrus.Debugf("pipeline run: 解析到 %d 个参数", len(runArgs))
+			}
+
 			arRoot := filepath.Dir(config.PipelinesDir)
 			runner := NewRunner(arRoot, config.PipelinesDir, config.ImagesStoreDir, config.OciRuntimeRoot)
-			taskID, err := runner.Run(ctx, runPipelineName, nodes, "")
+			taskID, err := runner.Run(ctx, runPipelineName, nodes, runArgs, "")
 			if err != nil {
 				logrus.Errorf("pipeline run 失败: %v", err)
 				return err
@@ -112,6 +128,7 @@ func AddCommand(ctx context.Context, rootCommand *cobra.Command) {
 	}
 	runCmd.Flags().StringVarP(&runPipelineName, "pipeline", "p", "", "流水线名称（对应 pipelines-dir 下的 <name>.template.json）")
 	runCmd.Flags().StringVarP(&runNodesPath, "nodes", "n", "", "节点列表 JSON 文件路径（格式见 design/节点管理.md）")
+	runCmd.Flags().StringVarP(&runArgsPath, "args", "a", "", "参数文件路径（JSON 键值对，模板中通过 {{index .args \"key\"}} 或 {{arg .args \"key\"}} 读取，可选）")
 	_ = runCmd.MarkFlagRequired("pipeline")
 	_ = runCmd.MarkFlagRequired("nodes")
 	pipelineCmd.AddCommand(runCmd)

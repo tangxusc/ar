@@ -24,16 +24,17 @@ const (
 // LoadTemplate 从 pipelinesDir 读取 pipelineName.template.json（纯 JSON），返回步骤列表。
 // 若模板内含 Go template 语法（如 {{range .nodes}}），请使用 LoadAndRenderTemplate。
 func LoadTemplate(pipelinesDir, pipelineName string) ([]TemplateStep, error) {
-	return loadTemplateWithContext(pipelinesDir, pipelineName, nil)
+	return loadTemplateWithContext(pipelinesDir, pipelineName, nil, nil)
 }
 
 // LoadAndRenderTemplate 读取模板文件，用 nodes 作为上下文渲染（支持 {{.nodes}}、{{range}} 等），再解析为步骤列表。
+// args 为可选键值对参数（来自 --args 指定的 JSON 文件），在模板中通过 {{index .args "key"}} 或 {{arg .args "key"}} 读取。
 // 用于模板中含 Go template 语法的 pipeline_name.template.json。
-func LoadAndRenderTemplate(pipelinesDir, pipelineName string, nodes []RunNode) ([]TemplateStep, error) {
-	return loadTemplateWithContext(pipelinesDir, pipelineName, nodes)
+func LoadAndRenderTemplate(pipelinesDir, pipelineName string, nodes []RunNode, args map[string]interface{}) ([]TemplateStep, error) {
+	return loadTemplateWithContext(pipelinesDir, pipelineName, nodes, args)
 }
 
-func loadTemplateWithContext(pipelinesDir, pipelineName string, nodes []RunNode) ([]TemplateStep, error) {
+func loadTemplateWithContext(pipelinesDir, pipelineName string, nodes []RunNode, args map[string]interface{}) ([]TemplateStep, error) {
 	name := sanitizePipelineName(pipelineName)
 	if name == "" {
 		return nil, fmt.Errorf("流水线名称无效: %s", pipelineName)
@@ -54,7 +55,7 @@ func loadTemplateWithContext(pipelinesDir, pipelineName string, nodes []RunNode)
 			return nil, fmt.Errorf("解析流水线模板语法失败 %s: %w", path, err)
 		}
 		var buf bytes.Buffer
-		if err := tpl.Execute(&buf, buildRenderContext(nodes)); err != nil {
+		if err := tpl.Execute(&buf, buildRenderContext(nodes, args)); err != nil {
 			return nil, fmt.Errorf("渲染流水线模板失败 %s: %w", path, err)
 		}
 		toParse = buf.Bytes()
@@ -212,8 +213,9 @@ type NodeTemplateData struct {
 	LabelsStr  string
 }
 
-// buildRenderContext 根据节点列表构建模板上下文，仅包含 .nodes 数组。模板中可用 {{.nodes}}、{{(index .nodes 0).IP}}、{{range .nodes}} 等。
-func buildRenderContext(nodes []RunNode) map[string]interface{} {
+// buildRenderContext 根据节点列表构建模板上下文，包含 .nodes 数组和 .args 键值对。
+// 模板中可用 {{.nodes}}、{{(index .nodes 0).IP}}、{{range .nodes}}、{{index .args "key"}}、{{arg .args "key"}} 等。
+func buildRenderContext(nodes []RunNode, args map[string]interface{}) map[string]interface{} {
 	list := make([]NodeTemplateData, 0, len(nodes))
 	for _, n := range nodes {
 		list = append(list, NodeTemplateData{
@@ -225,12 +227,15 @@ func buildRenderContext(nodes []RunNode) map[string]interface{} {
 			LabelsStr:  labelsString(n.Labels),
 		})
 	}
-	return map[string]interface{}{"nodes": list}
+	if args == nil {
+		args = map[string]interface{}{}
+	}
+	return map[string]interface{}{"nodes": list, "args": args}
 }
 
 // RenderStep 用 nodes 数组渲染 step 的 entrypoint/args/env。模板中使用 .nodes（如 {{(index .nodes 0).IP}}、{{range .nodes}}）。
 func RenderStep(step TemplateStep, nodes []RunNode) TemplateStep {
-	ctx := buildRenderContext(nodes)
+	ctx := buildRenderContext(nodes, nil)
 	env := make([]string, 0, len(step.Env))
 	for _, e := range step.Env {
 		env = append(env, renderString(e, ctx))
@@ -301,10 +306,20 @@ func getNodeField(n NodeTemplateData, fieldName string) string {
 	}
 }
 
-// templateFuncs 供 renderString 使用的模板函数，如 join、len 等。
+// templateFuncs 供 renderString 使用的模板函数，如 join、len、arg 等。
 var templateFuncs = template.FuncMap{
 	"join":     func(sep string, s []string) string { return strings.Join(s, sep) },
 	"labelHas": labelHas,
+	// arg 从 .args 中读取指定 key 的值，key 不存在时返回空字符串。用法：{{arg .args "version"}}
+	"arg": func(args map[string]interface{}, key string) interface{} {
+		if args == nil {
+			return ""
+		}
+		if v, ok := args[key]; ok {
+			return v
+		}
+		return ""
+	},
 	"ipsByLabel": func(nodes []NodeTemplateData, key, value string) []string {
 		ips := make([]string, 0, len(nodes))
 		for _, n := range nodes {

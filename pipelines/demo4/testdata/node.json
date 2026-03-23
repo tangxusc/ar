@@ -1,0 +1,18 @@
+[
+    {
+        "ip": "127.0.0.1",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "role",
+                "value": "worker"
+            },
+            {
+                "key": "zone",
+                "value": "shanghai"
+            }
+        ]
+    }
+]

@@ -25,7 +25,7 @@ func (r *mutationResolver) RunPipeline(ctx context.Context, input model.RunPipel
 	runCancelRegistry.Store(taskID, cancel)
 	defer runCancelRegistry.Delete(taskID)
 
-	taskID, err := runner.Run(runCtx, input.PipelineName, nodes, taskID)
+	taskID, err := runner.Run(runCtx, input.PipelineName, nodes, nil, taskID)
 	if err != nil {
 		return nil, err
 	}

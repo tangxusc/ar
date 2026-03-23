@@ -31,9 +31,10 @@ func NewRunner(arRoot, pipelinesDir, imagesStoreDir, runtimeRoot string) *Runner
 
 // Run 执行流水线：加载模板、用节点渲染生成 pipeline.json、解析为 DAG、按拓扑序执行并更新 pipeline.json。
 // 若某步退出码非 0 则停止后续步骤并返回错误。
+// args 为可选键值对参数（来自 --args 指定的 JSON 文件），传入模板渲染上下文 .args。
 // taskID 若为空则自动生成；调用方可传入预生成的 taskID 以便与停止/恢复时注册的 cancel 对应。
 // 返回 taskID 与错误。
-func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, taskID string) (string, error) {
+func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, args map[string]interface{}, taskID string) (string, error) {
 	logrus.Debugf("Runner.Run: pipelineName=%s nodes=%d", pipelineName, len(nodes))
 	if len(nodes) == 0 {
 		logrus.Error("Runner.Run: 节点列表为空")
@@ -41,7 +42,7 @@ func (r *Runner) Run(ctx context.Context, pipelineName string, nodes []RunNode, 
 	}
 
 	// 1. 加载模板并用节点渲染（支持 .template.json 内 Go template 语法），得到带 DAG 的步骤列表（不在此处拓扑排序）
-	renderedSteps, err := LoadAndRenderTemplate(r.pipelinesDir, pipelineName, nodes)
+	renderedSteps, err := LoadAndRenderTemplate(r.pipelinesDir, pipelineName, nodes, args)
 	if err != nil {
 		logrus.Errorf("Runner.Run: 加载模板失败 pipeline=%s: %v", pipelineName, err)
 		return "", err
