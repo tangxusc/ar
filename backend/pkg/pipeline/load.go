@@ -239,17 +239,6 @@ func runOneShotContainer(ctx context.Context, runtimeRoot, bundleDir, containerI
 		return fmt.Errorf("创建 OCI runtime state root 失败 %s: %w", runtimeRoot, err)
 	}
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("获取当前工作目录失败: %w", err)
-	}
-	if err := os.Chdir(bundleDir); err != nil {
-		return fmt.Errorf("切换到 bundle 目录失败 %s: %w", bundleDir, err)
-	}
-	defer func() {
-		_ = os.Chdir(oldWD)
-	}()
-
 	rootless := os.Geteuid() != 0
 	containerCfg, err := specconv.CreateLibcontainerConfig(&specconv.CreateOpts{
 		CgroupName:      containerID,

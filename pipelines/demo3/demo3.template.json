@@ -2,51 +2,50 @@
     {
         "name": "alpine",
         "image": "alpine:latest",
-        "entrypoint": "cat",
-        "args": [
-            "/etc/os-release",
-            "/etc/hosts"
-        ],
-        "env": [
-            "env1=value1",
-            "env2=value2"
-        ],
-        "nodes": [
-            "step2-1","step2-2"
-        ]
+        "entrypoint": "sh",
+        "args": ["-c", "echo '=== L1: alpine ===' && date"],
+        "env": ["env1=value1"],
+        "nodes": ["step2-1", "step2-2", "step2-3"]
     },
     {
         "name": "step2-1",
         "image": "alpine:latest",
-        "entrypoint": "bash",
-        "args": [
-            "-c",
-            "echo step2-1",
-            "sleep 5s"
-        ],
-        "nodes": [
-            "step3"
-        ]
+        "entrypoint": "sh",
+        "args": ["-c", "echo '=== L2: step2-1 start ===' && sleep 5 && echo '=== L2: step2-1 done ==='"],
+        "nodes": ["step3-1"]
     },
     {
         "name": "step2-2",
         "image": "alpine:latest",
-        "entrypoint": "bash",
-        "args": [
-            "-c",
-            "echo step2-2",
-            "sleep 10s"
-        ],
-        "nodes": [
-            "step3"
-        ]
+        "entrypoint": "sh",
+        "args": ["-c", "echo '=== L2: step2-2 start ===' && sleep 8 && echo '=== L2: step2-2 done ==='"],
+        "nodes": ["step3-2"]
     },
     {
-        "name": "step3",
+        "name": "step2-3",
         "image": "alpine:latest",
-        "entrypoint": "echo",
-        "args": [
-            "step3"
-        ]
+        "entrypoint": "sh",
+        "args": ["-c", "echo '=== L2: step2-3 start ===' && sleep 3 && echo '=== L2: step2-3 done ==='"],
+        "nodes": ["step3-1", "step3-2"]
+    },
+    {
+        "name": "step3-1",
+        "image": "alpine:latest",
+        "entrypoint": "sh",
+        "args": ["-c", "echo '=== L3: step3-1 start ===' && sleep 2 && echo '=== L3: step3-1 done ==='"],
+        "nodes": ["step4"]
+    },
+    {
+        "name": "step3-2",
+        "image": "alpine:latest",
+        "entrypoint": "sh",
+        "args": ["-c", "echo '=== L3: step3-2 start ===' && sleep 2 && echo '=== L3: step3-2 done ==='"],
+        "nodes": ["step4"]
+    },
+    {
+        "name": "step4",
+        "image": "alpine:latest",
+        "entrypoint": "sh",
+        "args": ["-c", "echo '=== L4: step4 (all done) ===' && date"]
     }
 ]

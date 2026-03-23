@@ -113,6 +113,55 @@ func TopoOrder(steps []TemplateStep) ([]TemplateStep, error) {
 	return order, nil
 }
 
+// StepsToLevels 根据 steps 的 DAG 依赖关系，将步骤按层级分组（BFS 按批次）。
+// 同一层内的步骤互不依赖，可并行执行；不同层之间保持顺序。
+// 返回 [][]PipelineStepState，每个子切片为一层。
+func StepsToLevels(steps []PipelineStepState) ([][]PipelineStepState, error) {
+	nameToStep := make(map[string]PipelineStepState)
+	for _, s := range steps {
+		nameToStep[s.Name] = s
+	}
+	inDegree := make(map[string]int)
+	for _, s := range steps {
+		if _, ok := inDegree[s.Name]; !ok {
+			inDegree[s.Name] = 0
+		}
+		for _, next := range s.Nodes {
+			inDegree[next]++
+		}
+	}
+	// 初始队列：所有入度为 0 的节点
+	queue := make([]string, 0)
+	for name, d := range inDegree {
+		if d == 0 {
+			queue = append(queue, name)
+		}
+	}
+	var levels [][]PipelineStepState
+	total := 0
+	for len(queue) > 0 {
+		// 当前批次（层）就是 queue 中的全部节点
+		level := make([]PipelineStepState, 0, len(queue))
+		nextQueue := make([]string, 0)
+		for _, name := range queue {
+			level = append(level, nameToStep[name])
+			for _, next := range nameToStep[name].Nodes {
+				inDegree[next]--
+				if inDegree[next] == 0 {
+					nextQueue = append(nextQueue, next)
+				}
+			}
+		}
+		levels = append(levels, level)
+		total += len(level)
+		queue = nextQueue
+	}
+	if total != len(steps) {
+		return nil, fmt.Errorf("pipeline.json 中的 DAG 存在环或未知节点引用，无法得到层级顺序")
+	}
+	return levels, nil
+}
+
 // OrderStepsFromRunData 根据 pipeline.json 中的 steps（含 Nodes 依赖）解析为 DAG 并做拓扑排序，返回执行顺序。
 // 用于「先写入 pipeline.json，再解析为 DAG 再运行」的流程。
 func OrderStepsFromRunData(steps []PipelineStepState) ([]PipelineStepState, error) {

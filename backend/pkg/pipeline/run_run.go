@@ -60,7 +60,7 @@ func writeRuntimeSpecForRun(bundleDir string, image v1.Image, tasksDir, currentT
 			NoNewPrivileges: true,
 		},
 		Root: &specs.Root{
-			Path:     "rootfs",
+			Path:     filepath.Join(bundleDir, "rootfs"),
 			Readonly: false,
 		},
 		Hostname: "ar-run",
