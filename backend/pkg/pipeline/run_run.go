@@ -165,6 +165,14 @@ func RunStep(ctx context.Context, runtimeRoot, imagesStoreDir, runDir, nodeDir, 
 	defer stderrFile.Close()
 
 	err = runOneShotContainer(ctx, runtimeRoot, bundleDir, containerID, stdoutFile, stderrFile)
+	// 非 debug 模式下，步骤完成后及时删除 bundle 目录以释放磁盘空间
+	if !logrus.IsLevelEnabled(logrus.DebugLevel) {
+		if removeErr := os.RemoveAll(bundleDir); removeErr != nil {
+			logrus.Warnf("清理 bundle 目录失败 %s: %v", bundleDir, removeErr)
+		} else {
+			logrus.Infof("已清理步骤 bundle 目录: %s", bundleDir)
+		}
+	}
 	if err != nil {
 		// runOneShotContainer 在非 0 退出时返回 error，可解析或约定 ExitCode
 		return RunStepResult{ExitCode: 1, Err: err}
