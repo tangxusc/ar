@@ -4,7 +4,7 @@ PIPELINE_NAME := containerd-k8s-1_35_0-amd64-v2
 PIPELINE_TEMPLATE := containerd-k8s-1_35_0-amd64-v2.template.json
 PIPELINE_IMAGE := pipeline-$(PIPELINE_NAME):latest
 PIPELINE_ROOT := $(CURDIR)
-NODE_FILE ?= /home/ubuntu/ar/backend/test/node.json
+NODE_FILE ?= testdata/node.json
 
 .PHONY: help clean clean-package prepare-dirs download-artifacts download-runtime-artifacts download-kubernetes-artifacts download-pki-artifacts download-cni-artifacts download-addon-artifacts verify-artifacts package-artifacts build-step-images install-local-pipeline build-pipeline-image build dist test
 
