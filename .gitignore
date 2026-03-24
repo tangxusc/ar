@@ -34,6 +34,7 @@ go.work.sum
 # .vscode/
 
 # Offline artifact cache (containerd-k8s-1.35.0-amd64)
+*.tar
 pipelines/containerd-k8s-1.35.0-amd64/.tmp/
 pipelines/containerd-k8s-1.35.0-amd64/steps/base/artifacts/
 

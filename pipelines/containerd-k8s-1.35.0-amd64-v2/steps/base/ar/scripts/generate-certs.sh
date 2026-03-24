@@ -4,15 +4,16 @@ set -euo pipefail
 # ============================================================================
 # generate-certs.sh - 生成 K8s 所有组件的证书、kubeconfig 和 bootstrap 配置
 # ============================================================================
-# 用法: bash generate-certs.sh <master_ips> <etcd_ips>
-# 例:   bash generate-certs.sh "172.19.16.11" "172.19.16.11"
+# 用法: bash generate-certs.sh <master_ips> <etcd_ips> [vip] [master_public_ips]
+# 例:   bash generate-certs.sh "172.19.16.11" "172.19.16.11" "10.103.97.12" "1.2.3.4"
 # ============================================================================
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-MASTER_IPS="${1:?用法: $0 <master_ips> <etcd_ips> [vip]}"
-ETCD_IPS="${2:?用法: $0 <master_ips> <etcd_ips> [vip]}"
+MASTER_IPS="${1:?用法: $0 <master_ips> <etcd_ips> [vip] [master_public_ips]}"
+ETCD_IPS="${2:?用法: $0 <master_ips> <etcd_ips> [vip] [master_public_ips]}"
 LVSCARE_VIP="${3:-10.103.97.12}"
+MASTER_PUBLIC_IPS="${4:-}"
 
 PKI_DIR="/ar-data/pki"
 PEM_DIR="/ar/scripts/gen-pem"
@@ -33,6 +34,9 @@ cd "$PEM_DIR"
 APISERVER_SAN="kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster.local"
 APISERVER_SAN="${APISERVER_SAN},127.0.0.1,10.96.0.1,${LVSCARE_VIP}"
 APISERVER_SAN="${APISERVER_SAN},${MASTER_IPS}"
+if [[ -n "${MASTER_PUBLIC_IPS}" ]]; then
+  APISERVER_SAN="${APISERVER_SAN},${MASTER_PUBLIC_IPS}"
+fi
 
 echo "生成 apiserver 证书, SAN: ${APISERVER_SAN}"
 cfssl gencert \
@@ -119,6 +123,10 @@ APISERVER_URL="https://${LVSCARE_VIP}:6443"
 KUBECONFIG_DIR="/ar-data/kubeconfig"
 mkdir -p "$KUBECONFIG_DIR"
 
+# 取第一个 master IP
+FIRST_MASTER_IP="$(echo "${MASTER_IPS}" | tr ',' ' ' | awk '{print $1}')"
+MASTER_APISERVER_URL="https://${FIRST_MASTER_IP}:6443"
+
 # admin.kubeconfig
 kubectl config set-cluster kubernetes \
   --certificate-authority="${CA_PEM}" \
@@ -135,6 +143,23 @@ kubectl config set-context admin@kubernetes \
   --kubeconfig="${KUBECONFIG_DIR}/admin.kubeconfig" >/dev/null
 kubectl config use-context admin@kubernetes \
   --kubeconfig="${KUBECONFIG_DIR}/admin.kubeconfig" >/dev/null
+
+# master.kubeconfig（server 指向第一个 master IP）
+kubectl config set-cluster kubernetes \
+  --certificate-authority="${CA_PEM}" \
+  --embed-certs=true \
+  --server="${MASTER_APISERVER_URL}" \
+  --kubeconfig="${KUBECONFIG_DIR}/master.kubeconfig" >/dev/null
+kubectl config set-credentials admin \
+  --client-certificate="${PKI_DIR}/admin.pem" \
+  --client-key="${PKI_DIR}/admin-key.pem" \
+  --embed-certs=true \
+  --kubeconfig="${KUBECONFIG_DIR}/master.kubeconfig" >/dev/null
+kubectl config set-context admin@kubernetes \
+  --cluster=kubernetes --user=admin \
+  --kubeconfig="${KUBECONFIG_DIR}/master.kubeconfig" >/dev/null
+kubectl config use-context admin@kubernetes \
+  --kubeconfig="${KUBECONFIG_DIR}/master.kubeconfig" >/dev/null
 
 # controller-manager.kubeconfig
 kubectl config set-cluster kubernetes \
@@ -255,6 +280,22 @@ subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: system:nodes
+---
+# 授权 kube-apiserver 访问 kubelet API（nodes/proxy 子资源）
+# 二进制部署不会自动创建此绑定，缺少时 cilium status 等工具会报
+# "Forbidden (user=kube-apiserver, verb=create, resource=nodes, subresource(s)=[proxy])"
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-apiserver-kubelet-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kubelet-api-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: kube-apiserver
 EOF
 
 echo "所有证书、kubeconfig 和 bootstrap 配置生成完成"

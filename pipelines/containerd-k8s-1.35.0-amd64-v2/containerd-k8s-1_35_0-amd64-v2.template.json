@@ -341,7 +341,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "/ar/scripts/generate-certs.sh {{join "," (getNodeFieldValueByLabel .nodes "role" "master" "IntranetIP")}} {{join "," (getNodeFieldValueByLabel .nodes "etcd" "true" "IntranetIP")}} {{arg .args "lvs_care_vip"}}"
+      "/ar/scripts/generate-certs.sh {{join "," (getNodeFieldValueByLabel .nodes "role" "master" "IntranetIP")}} {{join "," (getNodeFieldValueByLabel .nodes "etcd" "true" "IntranetIP")}} {{arg .args "lvs_care_vip"}} {{join "," (getNodeFieldValueByLabel .nodes "role" "master" "IP")}}"
     ],
     "nodes": [
       {{range $i, $n := .nodes}}{{if $i}}, {{end}}"copy-k8s-certs-{{$i}}"{{end}}

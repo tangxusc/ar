@@ -67,6 +67,16 @@ for master_ip in "${MASTER_ARRAY[@]}"; do
   RS_ARGS="${RS_ARGS} --rs ${master_ip}:6443"
 done
 
+# 将系统 iptables 切换为 legacy 模式，确保与 lvscare 容器内行为一致
+# lvscare 容器内使用 iptables-legacy 写规则，若宿主机内核走 nftables 则 MASQUERADE 不生效
+if command -v update-alternatives >/dev/null 2>&1; then
+  if update-alternatives --display iptables 2>/dev/null | grep -q 'iptables-nft'; then
+    echo "将 iptables 切换为 legacy 模式（避免 lvscare MASQUERADE 规则失效）"
+    sudo update-alternatives --set iptables /usr/sbin/iptables-legacy
+    sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true
+  fi
+fi
+
 # 停止并删除已有的 lvscare 容器（如果存在）
 sudo nerdctl -n k8s.io rm -f "${LVSCARE_CONTAINER}" >/dev/null 2>&1 || true
 
@@ -79,5 +89,20 @@ sudo nerdctl -n k8s.io run -d \
   -v /lib/modules:/lib/modules:ro \
   "${LVSCARE_IMAGE}" \
   care --mode link --iface lvscare --vs "${LVSCARE_VIP}" ${RS_ARGS} --interval 5 >/dev/null
+
+# 等待 lvscare 完成初始化后确保网卡处于 UP 状态
+# lvscare 创建 dummy 网卡后有时不会自动 UP，导致 VIP 无法联通
+echo "等待 lvscare 网卡初始化..."
+for i in $(seq 1 30); do
+  if ip link show lvscare >/dev/null 2>&1; then
+    sudo ip link set lvscare up 2>/dev/null || true
+    echo "lvscare 网卡已 UP（等待 ${i}s）"
+    break
+  fi
+  if [[ ${i} -eq 30 ]]; then
+    echo "WARNING: lvscare 网卡在 30s 内未出现，请手动检查" >&2
+  fi
+  sleep 1
+done
 
 echo "lvs-care 已启动: VIP=${LVSCARE_VIP}, masters=${MASTER_IPS}"
