@@ -25,14 +25,17 @@ auth_password="${3:-tanxtanx}"
 tmp="$(mktemp)"
 trap 'rm -f "${tmp}"' EXIT
 
+auth_b64="$(printf '%s:%s' "${auth_username}" "${auth_password}" | base64 -w0)"
+
 IFS=',' read -r -a ips <<< "${ips_csv}"
 for ip in "${ips[@]}"; do
   [[ -n "${ip}" ]] || continue
   cat >> "${tmp}" <<EOF
 [host."http://${ip}:5000"]
   capabilities = ["pull", "resolve"]
-  auth = { username = "${auth_username}", password = "${auth_password}" }
   skip_verify = true
+  [host."http://${ip}:5000".header]
+    Authorization = ["Basic ${auth_b64}"]
 
 EOF
 done
