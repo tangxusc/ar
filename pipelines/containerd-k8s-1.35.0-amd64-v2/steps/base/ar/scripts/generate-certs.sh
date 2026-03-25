@@ -124,7 +124,7 @@ KUBECONFIG_DIR="/ar-data/kubeconfig"
 mkdir -p "$KUBECONFIG_DIR"
 
 # 取第一个 master IP
-FIRST_MASTER_IP="$(echo "${MASTER_IPS}" | tr ',' ' ' | awk '{print $1}')"
+FIRST_MASTER_IP="$(echo "${MASTER_PUBLIC_IPS}" | tr ',' ' ' | awk '{print $1}')"
 MASTER_APISERVER_URL="https://${FIRST_MASTER_IP}:6443"
 
 # admin.kubeconfig

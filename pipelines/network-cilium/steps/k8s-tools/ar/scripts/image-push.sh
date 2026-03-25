@@ -21,6 +21,15 @@ command -v skopeo >/dev/null 2>&1 || die "skopeo 未安装"
 
 IFS=',' read -ra REGISTRIES <<< "$REGISTRY_URLS"
 
+# skopeo 默认对非 localhost 地址使用 HTTPS，需将目标仓库配置为 insecure 以使用 HTTP
+mkdir -p /etc/containers
+: > /etc/containers/registries.conf
+for r in "${REGISTRIES[@]}"; do
+  r="${r// /}"
+  [[ -z "$r" ]] && continue
+  printf '[[registry]]\nlocation = "%s"\ninsecure = true\n\n' "$r" >> /etc/containers/registries.conf
+done
+
 for registry in "${REGISTRIES[@]}"; do
   registry="${registry// /}"
   [[ -z "$registry" ]] && continue

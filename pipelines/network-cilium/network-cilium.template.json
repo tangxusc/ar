@@ -1,0 +1,39 @@
+[
+  {
+    "name": "push-images",
+    "description": "推送离线镜像到私有仓库",
+    "image": "containerd-k8s-1_35_0-k8s-tools:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
+    ],
+    "nodes": [
+      "install-cilium"
+    ]
+  },
+  {
+    "name": "install-cilium",
+    "description": "安装cilium网络插件",
+    "image": "containerd-k8s-1_35_0-k8s-tools:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "env && kubectl get node && kubectl apply -f /ar/cilium.yaml"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ],
+    "nodes": [
+      "end"
+    ]
+  },
+  {
+    "name": "end",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "echo",
+    "args": [
+      "end"
+    ]
+  }
+]

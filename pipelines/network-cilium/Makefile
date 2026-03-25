@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
-PIPELINE_NAME := containerd-k8s-1_35_0-amd64-v2
-PIPELINE_TEMPLATE := containerd-k8s-1_35_0-amd64-v2.template.json
+PIPELINE_NAME := network-cilium
+PIPELINE_TEMPLATE := network-cilium.template.json
 PIPELINE_IMAGE := pipeline-$(PIPELINE_NAME):latest
 PIPELINE_ROOT := $(CURDIR)
 NODE_FILE ?= testdata/node.json

@@ -1,5 +1,5 @@
-IMAGE_NAME := containerd-k8s-1_35_0-kubectl:latest
-IMAGE_STORE_DIR := /var/lib/ar/images/containerd-k8s-1_35_0-kubectl
+IMAGE_NAME := containerd-k8s-1_35_0-k8s-tools:latest
+IMAGE_STORE_DIR := /var/lib/ar/images/containerd-k8s-1_35_0-k8s-tools
 THIS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 PIPELINE_ROOT := $(abspath $(THIS_DIR)/../..)
 DOCKERFILE := $(THIS_DIR)/Dockerfile
@@ -20,7 +20,7 @@ offline-images:
 			echo "Offline image exists, skip: $$archive"; \
 		fi; \
 		image_path="$$(echo "$$image" | sed 's|^[^/]*/||')"; \
-		printf 'skopeo copy --dest-creds "$${REGISTRY_USER}:$${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/%s" "docker://$${REGISTRY}/%s"\n' \
+		printf 'skopeo copy --dest-creds "$${REGISTRY_USER}:$${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/%s" "docker://$${REGISTRY}:5000/%s"\n' \
 			"$$(basename $$archive)" \
 			"$$image_path" \
 			>> "$(THIS_DIR)/ar/push-commands.sh"; \

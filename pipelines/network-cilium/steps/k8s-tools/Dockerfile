@@ -16,11 +16,8 @@ RUN apk add --no-cache \
     tar \
     wget
 
-RUN mkdir -p /ar/
+COPY ./ar/ /ar/
 WORKDIR /ar
 RUN wget -O helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-linux-${CLI_ARCH}.tar.gz && tar -xzf helm.tar.gz && mv linux-${CLI_ARCH}/helm /usr/local/bin/ && chmod +x /usr/local/bin/helm && rm helm.tar.gz
 RUN curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CLI_ARCH}/kubectl && mv kubectl /usr/local/bin/ && chmod +x /usr/local/bin/kubectl 
 RUN curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz && tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin && rm cilium-linux-${CLI_ARCH}.tar.gz
-
-
-
