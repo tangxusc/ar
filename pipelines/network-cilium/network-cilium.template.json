@@ -19,7 +19,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "env && kubectl get node && kubectl apply -f /ar/cilium.yaml"
+      "kubectl apply -f /ar/cilium.yaml"
     ],
     "env": [
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
