@@ -432,11 +432,72 @@
     ],
     "env": ["SSHPASS={{with index .nodes 0}}{{.Password}}{{end}}"],
     "nodes": [
+      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"copy-coredns-artifacts-{{$i}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}
+  {
+    "name": "copy-coredns-artifacts-{{$i}}",
+    "description": "复制 CoreDNS 离线包和安装文件到节点 {{$n.IP}}",
+    "image": "containerd-k8s-1_35_0-coredns:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "rsync",
+      "-avzc",
+      "-e",
+      "ssh -p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
+      "/ar/",
+      "{{$n.Username}}@{{$n.IP}}:/tmp/ar/"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      "install-coredns-image-{{$i}}"
+    ]
+  },
+  {{end}}
+  {{range $i, $n := .nodes}}
+  {
+    "name": "install-coredns-image-{{$i}}",
+    "description": "在节点 {{$n.IP}} 导入 CoreDNS 离线镜像",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/install-coredns-image.sh"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
+      "apply-coredns"
+    ]
+  },
+  {{end}}
+  {
+    "name": "apply-coredns",
+    "description": "在首个 master 上创建 CoreDNS 工作负载",
+    "image": "containerd-k8s-1_35_0-coredns:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "kubectl apply -f /ar/coredns.yaml"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ],
+    "nodes": [
       "end"
     ]
   },
   {
     "name": "end",
+    "description": "流水线执行完成，CoreDNS 资源已创建",
     "image": "containerd-k8s-1_35_0-base:latest",
     "entrypoint": "echo",
     "args": [
