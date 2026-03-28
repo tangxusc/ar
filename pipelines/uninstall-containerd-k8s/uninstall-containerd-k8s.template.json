@@ -126,6 +126,25 @@
       "sudo bash /tmp/ar/scripts/uninstall-containerd.sh"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": ["cleanup-tmp-ar-{{$i}}"]
+  },
+  {
+    "name": "cleanup-tmp-ar-{{$i}}",
+    "description": "删除节点 {{$n.IP}} 的 /tmp/ar 目录",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo rm -rf /tmp/ar"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
     "nodes": ["end"]
   },
   {{end}}
