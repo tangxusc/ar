@@ -1,0 +1,139 @@
+[
+  {
+    "name": "start",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "echo",
+    "args": ["start"],
+    "nodes": ["print-pipeline-execution-plan"]
+  },
+  {
+    "name": "print-pipeline-execution-plan",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "cat",
+    "args": ["/tasks/pipeline.json"],
+    "nodes": [
+      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"copy-artifacts-{{$i}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}
+  {
+    "name": "copy-artifacts-{{$i}}",
+    "description": "复制卸载脚本到节点 {{$n.IP}}",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "rsync",
+      "-avzc",
+      "-e",
+      "ssh -p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
+      "/ar/",
+      "{{$n.Username}}@{{$n.IP}}:/tmp/ar/"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": ["uninstall-k8s-components-{{$i}}"]
+  },
+  {
+    "name": "uninstall-k8s-components-{{$i}}",
+    "description": "卸载 K8s 组件 {{$n.IP}}",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/uninstall-k8s-components.sh"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": ["uninstall-registry-{{$i}}"]
+  },
+  {
+    "name": "uninstall-registry-{{$i}}",
+    "description": "卸载 registry {{$n.IP}}",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/uninstall-registry.sh"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": ["uninstall-lvs-care-{{$i}}"]
+  },
+  {
+    "name": "uninstall-lvs-care-{{$i}}",
+    "description": "卸载 lvs-care {{$n.IP}}",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/uninstall-lvs-care.sh"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": ["uninstall-etcd-{{$i}}"]
+  },
+  {
+    "name": "uninstall-etcd-{{$i}}",
+    "description": "卸载 etcd {{$n.IP}}",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/uninstall-etcd.sh {{arg $.args `purge_etcd_data`}}"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": ["uninstall-containerd-{{$i}}"]
+  },
+  {
+    "name": "uninstall-containerd-{{$i}}",
+    "description": "卸载 containerd {{$n.IP}}",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/uninstall-containerd.sh"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": ["end"]
+  },
+  {{end}}
+  {
+    "name": "end",
+    "description": "卸载流水线执行完成",
+    "image": "uninstall-containerd-k8s-base:latest",
+    "entrypoint": "echo",
+    "args": ["end"]
+  }
+]

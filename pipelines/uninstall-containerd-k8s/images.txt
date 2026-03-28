@@ -1,0 +1,1 @@
+uninstall-containerd-k8s-base:latest

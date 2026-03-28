@@ -1,0 +1,27 @@
+[
+  {
+    "ip": "43.154.142.246",
+    "intranet_ip": "172.19.0.2",
+    "port": "22",
+    "username": "ubuntu",
+    "password": "Tcdn@2007",
+    "labels": [
+      { "key": "etcd", "value": "true" },
+      { "key": "role", "value": "master" },
+      { "key": "env", "value": "dev" },
+      { "key": "zone", "value": "shanghai" },
+      { "key": "registry", "value": "true" }
+    ]
+  },
+  {
+    "ip": "129.226.52.171",
+    "intranet_ip": "172.19.0.16",
+    "port": "22",
+    "username": "ubuntu",
+    "password": "Tcdn@2007",
+    "labels": [
+      { "key": "role", "value": "worker" },
+      { "key": "zone", "value": "shanghai" }
+    ]
+  }
+]
