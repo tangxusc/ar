@@ -99,6 +99,7 @@ sudo cp "${TMP_CONF}" "${CONF_FILE}"
 rm -f "${TMP_CONF}"
 
 sudo nerdctl -n k8s.io run --rm \
+  --net host \
   -v "${CONF_FILE}:/etc/nginx/nginx.conf:ro" \
   "${NGINX_IMAGE}" nginx -t >/dev/null
 
