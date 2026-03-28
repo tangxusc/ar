@@ -105,4 +105,15 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
+# 补充定向 SNAT 规则，确保 VIP 转发到 apiserver 的流量都被正确伪装
+echo "配置定向 SNAT 规则（VIP=${LVSCARE_VIP_HOST} -> masters:6443）..."
+for master_ip in "${MASTER_ARRAY[@]}"; do
+  if sudo iptables -t nat -C POSTROUTING -s "${LVSCARE_VIP_HOST}/32" -d "${master_ip}/32" -p tcp --dport 6443 -j MASQUERADE >/dev/null 2>&1; then
+    echo "SNAT 规则已存在: ${LVSCARE_VIP_HOST} -> ${master_ip}:6443"
+    continue
+  fi
+  sudo iptables -t nat -A POSTROUTING -s "${LVSCARE_VIP_HOST}/32" -d "${master_ip}/32" -p tcp --dport 6443 -j MASQUERADE
+  echo "SNAT 规则已添加: ${LVSCARE_VIP_HOST} -> ${master_ip}:6443"
+done
+
 echo "lvs-care 已启动: VIP=${LVSCARE_VIP}, masters=${MASTER_IPS}"
