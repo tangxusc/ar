@@ -10,7 +10,7 @@ k8s的二进制文件已经下载至/ar/tar/kubernetes-server-linux-amd64.tar.gz
 CA证书已生成并存放于/ar-data/pki/目录下,在前序步骤中,这些证书已被拷贝至目标节点的/tmp/ar/pki/目录下
 
 在etcd安装完成后,执行以下步骤:
-1. 使用cfssl结合/ar-data/pki/ca-config.json和/ar-data/pki/ca-csr.json和已有ca证书生成apiserver,scheduler,controller-manager证书和私钥,存放于/ar-data/pki/下,其中apiserver的证书中需要包含lvs-care的虚拟IP地址(10.103.97.12:6443)
+1. 使用cfssl结合/ar-data/pki/ca-config.json和/ar-data/pki/ca-csr.json和已有ca证书生成apiserver,scheduler,controller-manager证书和私钥,存放于/ar-data/pki/下,其中apiserver证书需要包含127.0.0.1
 2. 使用cfssl结合/ar-data/pki/ca-config.json和/ar-data/pki/ca-csr.json和已有ca证书生成kubelet证书和私钥,存放于/ar-data/pki/下
 3. 使用cfssl结合/ar-data/pki/ca-config.json和/ar-data/pki/ca-csr.json和已有ca证书生成kube-proxy证书和私钥,存放于/ar-data/pki/下
 4. 使用cfssl结合/ar-data/pki/ca-config.json和/ar-data/pki/ca-csr.json和已有ca证书生成admin证书和私钥,存放于/ar-data/pki/下

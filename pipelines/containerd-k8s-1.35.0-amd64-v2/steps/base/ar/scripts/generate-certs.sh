@@ -4,16 +4,15 @@ set -euo pipefail
 # ============================================================================
 # generate-certs.sh - 生成 K8s 所有组件的证书、kubeconfig 和 bootstrap 配置
 # ============================================================================
-# 用法: bash generate-certs.sh <master_ips> <etcd_ips> [vip] [master_public_ips]
-# 例:   bash generate-certs.sh "172.19.16.11" "172.19.16.11" "10.103.97.12" "1.2.3.4"
+# 用法: bash generate-certs.sh <master_ips> <etcd_ips> [master_public_ips]
+# 例:   bash generate-certs.sh "172.19.16.11" "172.19.16.11" "1.2.3.4"
 # ============================================================================
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-MASTER_IPS="${1:?用法: $0 <master_ips> <etcd_ips> [vip] [master_public_ips]}"
-ETCD_IPS="${2:?用法: $0 <master_ips> <etcd_ips> [vip] [master_public_ips]}"
-LVSCARE_VIP="${3:-10.103.97.12}"
-MASTER_PUBLIC_IPS="${4:-}"
+MASTER_IPS="${1:?用法: $0 <master_ips> <etcd_ips> [master_public_ips]}"
+ETCD_IPS="${2:?用法: $0 <master_ips> <etcd_ips> [master_public_ips]}"
+MASTER_PUBLIC_IPS="${3:-}"
 
 PKI_DIR="/ar-data/pki"
 PEM_DIR="/ar/scripts/gen-pem"
@@ -32,7 +31,7 @@ cd "$PEM_DIR"
 
 # --- 1. apiserver 证书 ---
 APISERVER_SAN="kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster.local"
-APISERVER_SAN="${APISERVER_SAN},127.0.0.1,10.96.0.1,${LVSCARE_VIP}"
+APISERVER_SAN="${APISERVER_SAN},127.0.0.1,10.96.0.1"
 APISERVER_SAN="${APISERVER_SAN},${MASTER_IPS}"
 if [[ -n "${MASTER_PUBLIC_IPS}" ]]; then
   APISERVER_SAN="${APISERVER_SAN},${MASTER_PUBLIC_IPS}"
@@ -119,12 +118,15 @@ if ! command -v kubectl >/dev/null 2>&1; then
 fi
 
 # --- 11. 生成 kubeconfig 文件 ---
-APISERVER_URL="https://${LVSCARE_VIP}:6443"
+APISERVER_URL="https://127.0.0.1:8443"
 KUBECONFIG_DIR="/ar-data/kubeconfig"
 mkdir -p "$KUBECONFIG_DIR"
 
-# 取第一个 master IP
+# 取第一个 master IP（优先公网 IP，缺失时回退内网 IP）
 FIRST_MASTER_IP="$(echo "${MASTER_PUBLIC_IPS}" | tr ',' ' ' | awk '{print $1}')"
+if [[ -z "${FIRST_MASTER_IP}" ]]; then
+  FIRST_MASTER_IP="$(echo "${MASTER_IPS}" | tr ',' ' ' | awk '{print $1}')"
+fi
 MASTER_APISERVER_URL="https://${FIRST_MASTER_IP}:6443"
 
 # admin.kubeconfig

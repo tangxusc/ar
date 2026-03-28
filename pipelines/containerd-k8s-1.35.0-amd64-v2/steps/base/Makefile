@@ -11,8 +11,8 @@ DOCKERFILE := $(THIS_DIR)/Dockerfile
 REGISTRY_REF := docker.io/library/registry:2.8.3
 REGISTRY_ARCHIVE := $(THIS_DIR)/ar/images/registry-2.8.3.tar
 
-LVSCARE_REF := ghcr.io/labring/lvscare:v5.1.2-rc3
-LVSCARE_ARCHIVE := $(THIS_DIR)/ar/images/lvs-care.tar
+NGINX_REF := docker.io/library/nginx:1.27.5
+NGINX_ARCHIVE := $(THIS_DIR)/ar/images/nginx-1.27.5.tar
 
 offline-images:
 	mkdir -p "$(THIS_DIR)/ar/images"
@@ -22,11 +22,11 @@ offline-images:
 	else \
 		echo "Offline image exists, skip: $(REGISTRY_ARCHIVE)"; \
 	fi
-	@if [ ! -s "$(LVSCARE_ARCHIVE)" ]; then \
-		echo "Downloading offline image: $(LVSCARE_REF) -> $(LVSCARE_ARCHIVE)"; \
-		skopeo copy --override-os linux --override-arch amd64 "docker://$(LVSCARE_REF)" "oci-archive:$(LVSCARE_ARCHIVE):ghcr.io/labring/lvscare:v5.1.2-rc3"; \
+	@if [ ! -s "$(NGINX_ARCHIVE)" ]; then \
+		echo "Downloading offline image: $(NGINX_REF) -> $(NGINX_ARCHIVE)"; \
+		skopeo copy --override-os linux --override-arch amd64 "docker://$(NGINX_REF)" "oci-archive:$(NGINX_ARCHIVE):docker.io/library/nginx:1.27.5"; \
 	else \
-		echo "Offline image exists, skip: $(LVSCARE_ARCHIVE)"; \
+		echo "Offline image exists, skip: $(NGINX_ARCHIVE)"; \
 	fi
 
 build:

@@ -69,11 +69,11 @@
       "sudo bash /tmp/ar/scripts/uninstall-registry.sh"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
-    "nodes": ["uninstall-lvs-care-{{$i}}"]
+    "nodes": ["uninstall-nginx-proxy-{{$i}}"]
   },
   {
-    "name": "uninstall-lvs-care-{{$i}}",
-    "description": "卸载 lvs-care {{$n.IP}}",
+    "name": "uninstall-nginx-proxy-{{$i}}",
+    "description": "卸载 nginx apiserver 反向代理 {{$n.IP}}",
     "image": "uninstall-containerd-k8s-base:latest",
     "entrypoint": "sshpass",
     "args": [
@@ -85,7 +85,7 @@
       "-o",
       "UserKnownHostsFile=/dev/null",
       "{{$n.Username}}@{{$n.IP}}",
-      "sudo bash /tmp/ar/scripts/uninstall-lvs-care.sh"
+      "sudo bash /tmp/ar/scripts/uninstall-nginx-proxy.sh"
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": ["uninstall-etcd-{{$i}}"]
