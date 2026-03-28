@@ -32,6 +32,10 @@ clean:
 	df -h
 
 build-step-images: package-artifacts
+	mkdir -p /var/lib/ar
+	mkdir -p /var/lib/ar/pipelines/
+	mkdir -p /var/lib/ar/images/
+	mkdir -p /var/lib/ar/images/containerd-k8s-1_35_0-base
 	sudo apt install skopeo -y
 	@for dir in steps/*; do \
 		if [ -d "$$dir" ]; then \
@@ -40,10 +44,7 @@ build-step-images: package-artifacts
 	done
 
 install-local-pipeline: build-step-images
-	mkdir -p /var/lib/ar/
-	mkdir -p /var/lib/ar/pipelines/
-	mkdir -p /var/lib/ar/images/
-	mkdir -p /var/lib/ar/images/containerd-k8s-1_35_0-base
+	
 	cp "$(PIPELINE_TEMPLATE)" /var/lib/ar/pipelines/
 	allrun pipeline list
 
