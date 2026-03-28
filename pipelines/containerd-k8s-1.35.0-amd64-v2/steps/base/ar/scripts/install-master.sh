@@ -150,6 +150,18 @@ echo "--- 步骤 9: 安装 kubelet ---"
 sudo mkdir -p /etc/kubernetes/manifests /var/lib/kubelet
 
 sudo cp /tmp/ar/confs/kubelet-conf.yml /etc/kubernetes/kubelet-conf.yml
+
+KUBELET_RESOLV_CONF="/etc/resolv.conf"
+if systemctl is-active --quiet systemd-resolved; then
+  RESOLV_REALPATH="$(readlink -f /etc/resolv.conf 2>/dev/null || true)"
+  if [[ "${RESOLV_REALPATH}" == *"/run/systemd/resolve/stub-resolv.conf"* ]] || grep -q '127\.0\.0\.53' /etc/resolv.conf 2>/dev/null; then
+    KUBELET_RESOLV_CONF="/run/systemd/resolve/resolv.conf"
+  fi
+fi
+
+sudo sed -i "s|^resolvConf: .*|resolvConf: ${KUBELET_RESOLV_CONF}|" /etc/kubernetes/kubelet-conf.yml
+echo "kubelet resolvConf: ${KUBELET_RESOLV_CONF}"
+
 sudo cp /tmp/ar/service/kubelet.service /usr/lib/systemd/system/kubelet.service
 sudo sed -i "s|REPLACE_NODE_IP|${NODE_IP}|g" /usr/lib/systemd/system/kubelet.service
 
