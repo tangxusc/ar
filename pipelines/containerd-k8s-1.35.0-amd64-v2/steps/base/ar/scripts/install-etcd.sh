@@ -34,7 +34,6 @@ set -e
 # │   ├── containerd.conf          # containerd 配置
 # │   ├── etcd.config.yml          # etcd 配置模板 (渲染前的原始模板)
 # │   ├── hosts.toml               # containerd registry hosts 配置
-# │   ├── ipvs.conf                # IPVS 内核模块配置
 # │   ├── k8s.conf                 # K8s 内核参数配置
 # │   └── limits.conf              # ulimit 配置
 # ├── hosts                        # gen-etcd-config.sh 生成的 IP→节点名映射

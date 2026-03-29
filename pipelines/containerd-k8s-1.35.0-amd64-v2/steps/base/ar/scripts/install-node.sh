@@ -82,29 +82,6 @@ sudo systemctl enable kube-proxy
 sudo systemctl start kube-proxy
 echo "kube-proxy 已启动"
 
-# --- 6. 配置 kube-ipvs0 接口自动启动 ---
-echo "--- 步骤 6: 配置 kube-ipvs0 接口自动启动 ---"
-sudo tee /etc/systemd/system/kube-ipvs0-up.service > /dev/null << 'EOF'
-[Unit]
-Description=Bring up kube-ipvs0 interface
-After=kube-proxy.service
-Requires=kube-proxy.service
-
-[Service]
-Type=oneshot
-ExecStartPre=/bin/sleep 5
-ExecStart=/usr/sbin/ip link set kube-ipvs0 up
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable kube-ipvs0-up.service
-sudo systemctl start kube-ipvs0-up.service
-echo "kube-ipvs0 接口自动启动已配置"
-
 echo "===== Worker 节点安装完成 ====="
 sudo systemctl status kubelet --no-pager || true
 sudo systemctl status kube-proxy --no-pager || true

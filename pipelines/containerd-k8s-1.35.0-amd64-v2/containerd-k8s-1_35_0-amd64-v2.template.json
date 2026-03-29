@@ -82,29 +82,6 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
-        "install-ipvs-{{$i}}"
-    ]
-  },
-  {{end}}
-  {{range $i, $n := .nodes}}
-  {
-    "name": "install-ipvs-{{$i}}",
-    "description": "安装ipvs",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "sshpass",
-    "args": [
-      "-e",
-      "ssh",
-      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
-      "-o",
-      "StrictHostKeyChecking=no",
-      "-o",
-      "UserKnownHostsFile=/dev/null",
-      "{{$n.Username}}@{{$n.IP}}",
-      "sudo apt install ipvsadm ipset sysstat conntrack -y && sudo cp /tmp/ar/confs/ipvs.conf /etc/modules-load.d/ipvs.conf &&sudo systemctl restart systemd-modules-load.service &&sudo lsmod | grep -e ip_vs -e nf_conntrack"
-    ],
-    "env": ["SSHPASS={{$n.Password}}"],
-    "nodes": [
         "adjust-k8s-conf-{{$i}}"
     ]
   },
