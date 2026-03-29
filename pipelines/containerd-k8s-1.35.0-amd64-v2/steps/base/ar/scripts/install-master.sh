@@ -182,27 +182,27 @@ sudo systemctl start kube-proxy
 echo "kube-proxy 已启动"
 
 # --- 10.1. 配置 kube-ipvs0 接口自动启动 ---
-echo "--- 步骤 10.1: 配置 kube-ipvs0 接口自动启动 ---"
-sudo tee /etc/systemd/system/kube-ipvs0-up.service > /dev/null << 'EOF'
-[Unit]
-Description=Bring up kube-ipvs0 interface
-After=kube-proxy.service
-Requires=kube-proxy.service
+# echo "--- 步骤 10.1: 配置 kube-ipvs0 接口自动启动 ---"
+# sudo tee /etc/systemd/system/kube-ipvs0-up.service > /dev/null << 'EOF'
+# [Unit]
+# Description=Bring up kube-ipvs0 interface
+# After=kube-proxy.service
+# Requires=kube-proxy.service
 
-[Service]
-Type=oneshot
-ExecStartPre=/bin/sleep 5
-ExecStart=/usr/sbin/ip link set kube-ipvs0 up
-RemainAfterExit=yes
+# [Service]
+# Type=oneshot
+# ExecStartPre=/bin/sleep 5
+# ExecStart=/usr/sbin/ip link set kube-ipvs0 up
+# RemainAfterExit=yes
 
-[Install]
-WantedBy=multi-user.target
-EOF
+# [Install]
+# WantedBy=multi-user.target
+# EOF
 
-sudo systemctl daemon-reload
-sudo systemctl enable kube-ipvs0-up.service
-sudo systemctl start kube-ipvs0-up.service
-echo "kube-ipvs0 接口自动启动已配置"
+# sudo systemctl daemon-reload
+# sudo systemctl enable kube-ipvs0-up.service
+# sudo systemctl start kube-ipvs0-up.service
+# echo "kube-ipvs0 接口自动启动已配置"
 
 # --- 11. 等待节点注册并应用 labels ---
 echo "--- 步骤 11: 等待节点注册 ---"
