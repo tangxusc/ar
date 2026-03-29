@@ -16,22 +16,7 @@ fi
 
 sudo rm -rf /etc/nginx-apiserver-proxy >/dev/null 2>&1 || true
 
-# 兼容清理历史 lvs-care 残留，确保升级场景卸载干净
-if command -v nerdctl >/dev/null 2>&1; then
-  sudo nerdctl -n k8s.io rm -f lvscare >/dev/null 2>&1 || true
-fi
-
-if command -v ctr >/dev/null 2>&1; then
-  sudo ctr -n k8s.io task kill -s SIGKILL lvscare >/dev/null 2>&1 || true
-  sudo ctr -n k8s.io task rm -f lvscare >/dev/null 2>&1 || true
-  sudo ctr -n k8s.io container rm lvscare >/dev/null 2>&1 || true
-fi
-
-if ip link show lvscare >/dev/null 2>&1; then
-  sudo ip link delete lvscare >/dev/null 2>&1 || true
-fi
-
-for vip in 10.103.97.12 169.254.1.5; do
+for vip in 169.254.1.5; do
   while read -r line; do
     rule="${line#-A }"
     [[ -n "${rule}" ]] || continue
