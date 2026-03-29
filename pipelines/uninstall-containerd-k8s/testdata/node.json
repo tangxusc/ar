@@ -1,27 +1,65 @@
 [
-  {
-    "ip": "43.154.86.214",
-    "intranet_ip": "172.19.0.3",
-    "port": "22",
-    "username": "ubuntu",
-    "password": "Tcdn@2007",
-    "labels": [
-      { "key": "etcd", "value": "true" },
-      { "key": "role", "value": "master" },
-      { "key": "env", "value": "dev" },
-      { "key": "zone", "value": "shanghai" },
-      { "key": "registry", "value": "true" }
-    ]
-  },
-  {
-    "ip": "43.155.16.7",
-    "intranet_ip": "172.19.0.5",
-    "port": "22",
-    "username": "ubuntu",
-    "password": "Tcdn@2007",
-    "labels": [
-      { "key": "role", "value": "worker" },
-      { "key": "zone", "value": "shanghai" }
-    ]
-  }
+    {
+        "ip": "101.32.48.204",
+        "intranet_ip": "172.19.16.5",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "etcd",
+                "value": "true"
+            },
+            {
+                "key": "role",
+                "value": "master"
+            },
+            {
+                "key": "env",
+                "value": "dev"
+            },
+            {
+                "key": "zone",
+                "value": "shanghai"
+            },
+            {
+                "key": "registry",
+                "value": "true"
+            }
+        ]
+    },
+    {
+        "ip": "43.154.171.100",
+        "intranet_ip": "172.19.16.8",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "role",
+                "value": "worker"
+            },
+            {
+                "key": "zone",
+                "value": "shanghai"
+            }
+        ]
+    },
+    {
+        "ip": "43.134.223.192",
+        "intranet_ip": "172.19.16.12",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "role",
+                "value": "worker"
+            },
+            {
+                "key": "zone",
+                "value": "shanghai"
+            }
+        ]
+    }
 ]

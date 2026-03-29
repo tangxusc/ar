@@ -1,0 +1,23 @@
+# kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode && echo
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: rook-ceph-mgr
+    rook_cluster: rook-ceph
+  name: rook-ceph-mgr-dashboard-public
+  namespace: rook-ceph
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: https-dashboard
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: rook-ceph-mgr
+    mgr_role: active
+    rook_cluster: rook-ceph
+  sessionAffinity: None
+  type: NodePort

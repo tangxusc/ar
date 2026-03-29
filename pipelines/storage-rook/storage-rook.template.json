@@ -1,0 +1,55 @@
+[
+  {
+    "name": "push-images",
+    "description": "推送离线镜像到私有仓库",
+    "image": "rook-installer:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
+    ],
+    "nodes": [
+      "install-rook"
+    ]
+  },
+  {
+    "name": "install-rook",
+    "description": "安装rook存储",
+    "image": "rook-installer:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "kubectl create -f /ar/yaml/crds.yaml -f /ar/yaml/common.yaml -f /ar/yaml/csi-operator.yaml -f /ar/yaml/operator.yaml"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ],
+    "nodes": [
+      "end"
+    ]
+  },
+  {
+    "name": "install-rook-cluster",
+    "description": "安装rook存储集群",
+    "image": "rook-installer:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "kubectl apply -f /ar/yaml/cluster.yaml -f /ar/yaml/storageclass-fs.yaml -f /ar/yaml/storageclass-rbd.yaml -f /ar/yaml/object.yaml"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ],
+    "nodes": [
+      "end"
+    ]
+  },
+  {
+    "name": "end",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "echo",
+    "args": [
+      "end"
+    ]
+  }
+]
