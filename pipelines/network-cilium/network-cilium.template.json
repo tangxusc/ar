@@ -19,7 +19,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "kubectl apply -f /ar/cilium.yaml"
+      "cilium install"
     ],
     "env": [
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
