@@ -9,9 +9,34 @@
       "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
     ],
     "nodes": [
+      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"cleanup-cilium-{{$i}}"{{end}}
+    ]
+  },
+  {{range $i, $n := .nodes}}
+  {
+    "name": "cleanup-cilium-{{$i}}",
+    "description": "清理节点 {{$n.IP}} 上遗留的 cilium 主机状态",
+    "image": "containerd-k8s-1_35_0-base:latest",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash -lc 'rm -f /etc/cni/net.d/05-cilium.conflist /etc/cni/net.d/05-cilium.conf; rm -rf /run/cilium /var/run/cilium /sys/fs/bpf/cilium; find /sys/fs/bpf/tc/globals -maxdepth 1 -name \"cilium_*\" -delete; ip link delete cilium_host 2>/dev/null || true; ip link delete cilium_net 2>/dev/null || true; ip link delete cilium_vxlan 2>/dev/null || true; ip link delete lxc_health 2>/dev/null || true'"
+    ],
+    "env": [
+      "SSHPASS={{$n.Password}}"
+    ],
+    "nodes": [
       "install-cilium"
     ]
   },
+  {{end}}
   {
     "name": "install-cilium",
     "description": "安装cilium网络插件",
@@ -19,7 +44,7 @@
     "entrypoint": "bash",
     "args": [
       "-lcx",
-      "cilium install"
+      "helm upgrade --install cilium /ar/cilium-1.19.2.tgz --version 1.19.2 --namespace kube-system --set ipam.mode=cluster-pool --set-string ipam.operator.clusterPoolIPv4PodCIDRList[0]=10.244.0.0/16 --set ipam.operator.clusterPoolIPv4MaskSize=24 --set k8sServiceHost=127.0.0.1 --set-string k8sServicePort=8443"
     ],
     "env": [
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
