@@ -1,0 +1,71 @@
+[
+  {
+    "name": "push-images",
+    "description": "推送离线镜像到私有仓库",
+    "image": "istio-installer:1.29.1",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
+    ],
+    "nodes": [
+      "install-istio-crd"
+    ]
+  },
+  {
+    "name": "install-istio-crd",
+    "description": "安装istio-crd",
+    "image": "istio-installer:1.29.1",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "helm upgrade --install istio-base /ar/base-1.29.1.tgz --version 1.29.1 --namespace istio-system --create-namespace --wait"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ],
+    "nodes": [
+      "install-istiod"
+    ]
+  },
+  {
+    "name": "install-istiod",
+    "description": "安装istio-istiod",
+    "image": "istio-installer:1.29.1",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "helm upgrade --install istiod /ar/istiod-1.29.1.tgz --version 1.29.1 --namespace istio-system --create-namespace --wait"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ],
+    "nodes": [
+      "install-istio-gateway"
+    ]
+  },
+  {
+    "name": "install-istio-gateway",
+    "description": "安装istio-gateway",
+    "image": "istio-installer:1.29.1",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "helm upgrade --install istio-gateway /ar/gateway-1.29.1.tgz --version 1.29.1 --namespace istio-system --create-namespace --wait"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ],
+    "nodes": [
+      "end"
+    ]
+  },
+  {
+    "name": "end",
+    "image": "istio-installer:1.29.1",
+    "entrypoint": "echo",
+    "args": [
+      "end"
+    ]
+  }
+]
