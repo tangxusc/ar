@@ -1,5 +1,5 @@
-IMAGE_NAME := containerd-k8s-1_35_0-k8s-tools:latest
-IMAGE_STORE_DIR := /var/lib/ar/images/containerd-k8s-1_35_0-k8s-tools
+IMAGE_NAME := cilium-installer:1.19.2
+IMAGE_STORE_DIR := /var/lib/ar/images/cilium-installer
 THIS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 PIPELINE_ROOT := $(abspath $(THIS_DIR)/../..)
 DOCKERFILE := $(THIS_DIR)/Dockerfile

@@ -1,1 +1,1 @@
-containerd-k8s-1_35_0-k8s-tools:latest
+cilium-installer:1.19.2

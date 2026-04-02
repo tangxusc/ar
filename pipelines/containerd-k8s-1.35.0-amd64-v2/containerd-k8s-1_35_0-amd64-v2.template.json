@@ -1,7 +1,7 @@
 [
   {
     "name": "start",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "echo",
     "args": [
       "start"
@@ -12,7 +12,7 @@
   },
   {
     "name": "print-pipeline-execution-plan",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "cat",
     "args": ["/tasks/pipeline.json"],
     "nodes": [
@@ -23,7 +23,7 @@
   {
     "name": "copy-artifacts-{{$i}}",
     "description": "复制artifacts",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -44,7 +44,7 @@
   {
     "name": "disable-swap-{{$i}}",
     "description": "禁用swap",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -67,7 +67,7 @@
   {
     "name": "adjust-ulimit-{{$i}}",
     "description": "调整ulimit",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -90,7 +90,7 @@
   {
     "name": "adjust-k8s-conf-{{$i}}",
     "description": "调整k8s内核配置",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -113,7 +113,7 @@
   {
     "name": "install-containerd-{{$i}}",
     "description": "安装containerd",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -136,7 +136,7 @@
   {
     "name": "render-registry-hosts",
     "description": "渲染镜像仓库 hosts.toml",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "bash",
     "args": [
       "-lcx",
@@ -150,7 +150,7 @@
   {
     "name": "distribute-registry-hosts-{{$i}}",
     "description": "分发镜像仓库 hosts.toml",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -171,7 +171,7 @@
   {
     "name": "install-image-registry-{{$n.IP}}",
     "description": "安装镜像仓库",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -194,7 +194,7 @@
   {
     "name": "configure-containerd-registry-{{$i}}",
     "description": "配置 containerd registry mirror",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -218,7 +218,7 @@
   {
     "name": "install-nginx-proxy-{{$i}}",
     "description": "安装nginx apiserver反向代理",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -240,7 +240,7 @@
   {
     "name": "gen-ca-pem",
     "description": "生成ca证书",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "bash",
     "args": [
       "-lcx",
@@ -253,7 +253,7 @@
   {
     "name": "gen-etcd-config",
     "description": "生成etcd配置",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "bash",
     "args": [
       "-lcx",
@@ -269,7 +269,7 @@
   {
     "name": "copy-etcd-certs-{{$n.IP}}",
     "description": "复制生成的证书和配置到目标主机",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -292,7 +292,7 @@
   {
     "name": "install-etcd-{{$n.IP}}",
     "description": "安装etcd",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -314,7 +314,7 @@
   {
     "name": "gen-k8s-certs",
     "description": "生成K8s组件证书和kubeconfig",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "bash",
     "args": [
       "-lcx",
@@ -328,7 +328,7 @@
   {
     "name": "copy-k8s-certs-{{$i}}",
     "description": "拷贝K8s证书和kubeconfig到节点{{$n.IP}}",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -349,7 +349,7 @@
   {
     "name": "install-master-{{$i}}",
     "description": "安装K8s master组件 {{$n.IP}}",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -372,7 +372,7 @@
   {
     "name": "install-node-{{$i}}",
     "description": "安装K8s node组件 {{$n.IP}}",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -394,7 +394,7 @@
   {
     "name": "apply-node-labels",
     "description": "在master上为所有节点应用labels",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -444,7 +444,7 @@
   {
     "name": "end",
     "description": "流水线执行完成，CoreDNS 资源已创建",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "echo",
     "args": [
       "end"

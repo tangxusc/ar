@@ -25,7 +25,7 @@
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
     ],
     "nodes": [
-      "end"
+      "install-rook-cluster"
     ]
   },
   {
@@ -39,17 +39,6 @@
     ],
     "env": [
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
-    ],
-    "nodes": [
-      "end"
-    ]
-  },
-  {
-    "name": "end",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "echo",
-    "args": [
-      "end"
     ]
   }
 ]

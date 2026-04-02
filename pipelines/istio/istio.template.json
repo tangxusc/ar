@@ -55,17 +55,6 @@
     ],
     "env": [
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
-    ],
-    "nodes": [
-      "end"
-    ]
-  },
-  {
-    "name": "end",
-    "image": "istio-installer:1.29.1",
-    "entrypoint": "echo",
-    "args": [
-      "end"
     ]
   }
 ]

@@ -26,8 +26,6 @@ clean:
 	rm -rf /tmp/*
 	rm -rf /var/lib/ar/runc/*
 	rm -rf /var/lib/ar/tasks/*
-	rm -rf /var/lib/ar/data/*
-	# docker image prune -f
 	docker system prune -a --volumes
 	df -h
 

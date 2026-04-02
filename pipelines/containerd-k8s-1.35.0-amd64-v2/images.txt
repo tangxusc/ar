@@ -1,2 +1,2 @@
-containerd-k8s-1_35_0-base:latest
+containerd-k8s-base-installer:1.35.0
 coredns-installer:1.14.2

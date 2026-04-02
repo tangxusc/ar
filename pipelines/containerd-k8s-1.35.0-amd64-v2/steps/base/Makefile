@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
-IMAGE_NAME := containerd-k8s-1_35_0-base:latest
-IMAGE_STORE_DIR := /var/lib/ar/images/containerd-k8s-1_35_0-base
+IMAGE_NAME := containerd-k8s-base-installer:1.35.0
+IMAGE_STORE_DIR := /var/lib/ar/images/containerd-k8s-base-installer
 THIS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 PIPELINE_ROOT := $(abspath $(THIS_DIR)/../..)
 DOCKERFILE := $(THIS_DIR)/Dockerfile

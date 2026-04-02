@@ -2,7 +2,7 @@
   {
     "name": "push-images",
     "description": "推送离线镜像到私有仓库",
-    "image": "containerd-k8s-1_35_0-k8s-tools:latest",
+    "image": "cilium-installer:1.19.2",
     "entrypoint": "bash",
     "args": [
       "-lcx",
@@ -16,7 +16,7 @@
   {
     "name": "cleanup-cilium-{{$i}}",
     "description": "清理节点 {{$n.IP}} 上遗留的 cilium 主机状态",
-    "image": "containerd-k8s-1_35_0-base:latest",
+    "image": "containerd-k8s-base-installer:1.35.0",
     "entrypoint": "sshpass",
     "args": [
       "-e",
@@ -40,7 +40,7 @@
   {
     "name": "install-cilium",
     "description": "安装cilium网络插件",
-    "image": "containerd-k8s-1_35_0-k8s-tools:latest",
+    "image": "cilium-installer:1.19.2",
     "entrypoint": "bash",
     "args": [
       "-lcx",
@@ -48,17 +48,6 @@
     ],
     "env": [
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
-    ],
-    "nodes": [
-      "end"
-    ]
-  },
-  {
-    "name": "end",
-    "image": "containerd-k8s-1_35_0-base:latest",
-    "entrypoint": "echo",
-    "args": [
-      "end"
     ]
   }
 ]

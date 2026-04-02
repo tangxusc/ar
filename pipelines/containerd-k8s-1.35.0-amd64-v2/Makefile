@@ -26,8 +26,6 @@ clean:
 	rm -rf /tmp/*
 	rm -rf /var/lib/ar/runc/*
 	rm -rf /var/lib/ar/tasks/*
-	rm -rf /var/lib/ar/data/*
-	# docker image prune -f
 	docker system prune -a --volumes
 	df -h
 
@@ -35,7 +33,6 @@ build-step-images: package-artifacts
 	mkdir -p /var/lib/ar
 	mkdir -p /var/lib/ar/pipelines/
 	mkdir -p /var/lib/ar/images/
-	mkdir -p /var/lib/ar/images/containerd-k8s-1_35_0-base
 	sudo apt install skopeo -y
 	@for dir in steps/*; do \
 		if [ -d "$$dir" ]; then \
