@@ -1,1 +1,0 @@
-containerd-k8s-1_35_0-base:latest
