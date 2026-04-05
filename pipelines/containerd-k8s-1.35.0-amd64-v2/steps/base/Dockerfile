@@ -11,6 +11,8 @@ ARG NERDCTL_VERSION=2.2.1
 ARG RUNC_VERSION=1.2.6
 # k8s版本
 ARG KUBERNETES_SERVER_VERSION=1.35.0
+ARG KUBECTL_VERSION=v1.35.0
+ARG CLI_ARCH=amd64
 
 # etcd版本
 ARG ETCD_VERSION=3.6.8
@@ -61,3 +63,6 @@ RUN wget "https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etc
 
 # 下载k8s
 RUN wget "https://dl.k8s.io/release/v${KUBERNETES_SERVER_VERSION}/kubernetes-server-linux-amd64.tar.gz" -O /ar/tar/kubernetes-server-linux-amd64.tar.gz
+# 下载kubectl
+RUN curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CLI_ARCH}/kubectl && mv kubectl /usr/bin/ && chmod +x /usr/bin/kubectl
+

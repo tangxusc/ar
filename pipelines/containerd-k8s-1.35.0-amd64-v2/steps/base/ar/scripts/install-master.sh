@@ -50,7 +50,7 @@ kubectl version --client || true
 
 # --- 2. 部署证书 ---
 echo "--- 步骤 2: 部署证书到 /etc/kubernetes/pki/ ---"
-sudo mkdir -p /etc/kubernetes/pki
+sudo mkdir -p /etc/kubernetes/pki /etc/kubernetes/pki/etcd
 PKI_SRC="/tmp/ar/pki"
 
 for f in ca.pem ca-key.pem apiserver.pem apiserver-key.pem \
@@ -64,8 +64,14 @@ for f in ca.pem ca-key.pem apiserver.pem apiserver-key.pem \
   sudo cp "${PKI_SRC}/${f}" /etc/kubernetes/pki/
 done
 
-echo "已部署证书:"
+sudo cp "${PKI_SRC}/etcd.pem" /etc/kubernetes/pki/etcd/etcd.pem
+sudo cp "${PKI_SRC}/etcd-key.pem" /etc/kubernetes/pki/etcd/etcd-key.pem
+sudo cp "${PKI_SRC}/ca.pem" /etc/kubernetes/pki/etcd/etcd-ca.pem
+
+echo "已部署证书 /etc/kubernetes/pki/:"
 ls -l /etc/kubernetes/pki/
+echo "已部署证书 /etc/kubernetes/pki/etcd/:"
+ls -l /etc/kubernetes/pki/etcd/
 
 # --- 3. 部署 kubeconfig ---
 echo "--- 步骤 3: 部署 kubeconfig ---"

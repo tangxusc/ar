@@ -1,7 +1,7 @@
 [
     {
-        "ip": "43.135.126.17",
-        "intranet_ip": "172.19.16.15",
+        "ip": "43.134.205.223",
+        "intranet_ip": "172.19.16.16",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
@@ -9,18 +9,45 @@
             {
                 "key": "etcd",
                 "value": "true"
-            },
+            }
+        ]
+    },
+    {
+        "ip": "43.132.192.167",
+        "intranet_ip": "172.19.16.9",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "etcd",
+                "value": "true"
+            }
+        ]
+    },
+    {
+        "ip": "43.129.174.115",
+        "intranet_ip": "172.19.16.10",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "etcd",
+                "value": "true"
+            }
+        ]
+    },
+    {
+        "ip": "119.28.84.76",
+        "intranet_ip": "172.19.16.15",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
             {
                 "key": "role",
                 "value": "master"
-            },
-            {
-                "key": "env",
-                "value": "dev"
-            },
-            {
-                "key": "zone",
-                "value": "shanghai"
             },
             {
                 "key": "registry",
@@ -29,8 +56,59 @@
         ]
     },
     {
-        "ip": "124.156.178.212",
-        "intranet_ip": "172.19.16.3",
+        "ip": "43.135.91.157",
+        "intranet_ip": "172.19.16.5",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "role",
+                "value": "master"
+            },
+            {
+                "key": "registry",
+                "value": "true"
+            }
+        ]
+    },
+    {
+        "ip": "43.135.26.187",
+        "intranet_ip": "172.19.16.4",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "role",
+                "value": "master"
+            },
+            {
+                "key": "registry",
+                "value": "true"
+            }
+        ]
+    },
+    {
+        "ip": "43.154.207.94",
+        "intranet_ip": "172.19.16.12",
+        "port": "22",
+        "username": "ubuntu",
+        "password": "Tcdn@2007",
+        "labels": [
+            {
+                "key": "role",
+                "value": "worker"
+            },
+            {
+                "key": "zone",
+                "value": "shanghai"
+            }
+        ]
+    },
+    {
+        "ip": "43.154.202.151",
+        "intranet_ip": "172.19.16.17",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
