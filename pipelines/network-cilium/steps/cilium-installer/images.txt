@@ -2,3 +2,6 @@ quay.io/cilium/cilium-envoy:v1.35.9-1773656288-7b052e66eb2cfc5ac130ce0a5be66202a
 quay.io/cilium/cilium:v1.19.2
 quay.io/cilium/operator-generic:v1.19.2
 registry.k8s.io/pause:3.10.1
+quay.io/cilium/hubble-relay:v1.19.2
+quay.io/cilium/hubble-ui:v0.13.3
+quay.io/cilium/hubble-ui-backend:v0.13.3

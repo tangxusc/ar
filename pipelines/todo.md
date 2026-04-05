@@ -7,5 +7,4 @@ wget -O k9s.tar.gz https://github.com/derailed/k9s/releases/download/v0.50.18/k9
 tar -zxvf k9s.tar.gz 
 chmod a+x k9s && mv k9s /usr/bin/
 ```
-- [ ] cilium hubble安装
 
