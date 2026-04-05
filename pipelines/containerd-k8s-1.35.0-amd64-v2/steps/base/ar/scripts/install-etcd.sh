@@ -20,7 +20,7 @@ set -e
 #   sshpass -e ssh user@<node-ip> "sudo sh /tmp/ar/scripts/install-etcd.sh <node-ip>"
 #
 # 执行步骤:
-#   1. 解压 etcd 二进制文件到 /usr/local/bin/
+#   1. 解压 etcd 二进制文件到 /usr/bin/
 #   2. 将 /tmp/ar/hosts 中的 etcd 节点写入 /etc/hosts (幂等, 不重复写入)
 #   3. 部署 etcd TLS 证书到 /etc/kubernetes/pki/etcd/
 #   4. 部署本节点 etcd 配置到 /etc/etcd/etcd.config.yml
@@ -51,8 +51,8 @@ set -e
 #     └── etcd.config.yml          # 已渲染的 etcd 配置 (含本节点 name/urls/cluster)
 #
 # 部署后目标主机关键路径:
-#   /usr/local/bin/etcd             # etcd 二进制
-#   /usr/local/bin/etcdctl          # etcdctl 二进制
+#   /usr/bin/etcd                   # etcd 二进制
+#   /usr/bin/etcdctl                # etcdctl 二进制
 #   /etc/etcd/etcd.config.yml      # etcd 配置文件
 #   /etc/kubernetes/pki/etcd/      # TLS 证书目录
 #     ├── etcd.pem                 # 服务端证书
@@ -74,9 +74,9 @@ if [ "$TARBALL_COUNT" -ne 1 ]; then echo "ERROR: /tmp/ar/tar/ 下存在多个 et
 ETCD_DIR_NAME=$(tar -tzf "$ETCD_TARBALL" | head -1 | cut -d'/' -f1)
 echo "检测到 etcd 包: $ETCD_TARBALL (目录: $ETCD_DIR_NAME)"
 sudo tar -xf "$ETCD_TARBALL" -C /tmp/
-sudo mv /tmp/${ETCD_DIR_NAME}/etcd /usr/local/bin/
-sudo mv /tmp/${ETCD_DIR_NAME}/etcdctl /usr/local/bin/
-sudo chmod +x /usr/local/bin/etcd /usr/local/bin/etcdctl
+sudo mv /tmp/${ETCD_DIR_NAME}/etcd /usr/bin/
+sudo mv /tmp/${ETCD_DIR_NAME}/etcdctl /usr/bin/
+sudo chmod +x /usr/bin/etcd /usr/bin/etcdctl
 sudo rm -rf /tmp/${ETCD_DIR_NAME}
 sudo etcd --version
 

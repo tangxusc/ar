@@ -24,11 +24,11 @@ echo "--- 步骤 1: 解压 K8s 二进制文件 ---"
 K8S_TARBALL="/tmp/ar/tar/kubernetes-server-linux-amd64.tar.gz"
 [[ -f "$K8S_TARBALL" ]] || die "K8s 包不存在: $K8S_TARBALL"
 
-sudo tar -xf "$K8S_TARBALL" --strip-components=3 -C /usr/local/bin/ \
+sudo tar -xf "$K8S_TARBALL" --strip-components=3 -C /usr/bin/ \
   kubernetes/server/bin/kubelet \
   kubernetes/server/bin/kube-proxy \
   kubernetes/server/bin/kubectl
-sudo chmod +x /usr/local/bin/kubelet /usr/local/bin/kube-proxy /usr/local/bin/kubectl
+sudo chmod +x /usr/bin/kubelet /usr/bin/kube-proxy /usr/bin/kubectl
 
 # --- 2. 部署证书 ---
 echo "--- 步骤 2: 部署证书 ---"

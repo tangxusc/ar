@@ -5,3 +5,6 @@ skopeo copy --dest-creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" --dest-tls-veri
 skopeo copy --dest-creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/quay.io-cilium-cilium-v1.19.2.tar" "docker://${REGISTRY}:5000/cilium/cilium:v1.19.2"
 skopeo copy --dest-creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/quay.io-cilium-operator-generic-v1.19.2.tar" "docker://${REGISTRY}:5000/cilium/operator-generic:v1.19.2"
 skopeo copy --dest-creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/registry.k8s.io-pause-3.10.1.tar" "docker://${REGISTRY}:5000/pause:3.10.1"
+skopeo copy --dest-creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/quay.io-cilium-hubble-relay-v1.19.2.tar" "docker://${REGISTRY}:5000/cilium/hubble-relay:v1.19.2"
+skopeo copy --dest-creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/quay.io-cilium-hubble-ui-v0.13.3.tar" "docker://${REGISTRY}:5000/cilium/hubble-ui:v0.13.3"
+skopeo copy --dest-creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" --dest-tls-verify=false "oci-archive:/ar/images/quay.io-cilium-hubble-ui-backend-v0.13.3.tar" "docker://${REGISTRY}:5000/cilium/hubble-ui-backend:v0.13.3"

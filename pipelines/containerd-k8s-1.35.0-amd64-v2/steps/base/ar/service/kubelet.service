@@ -6,7 +6,7 @@ Wants=network-online.target
 Requires=containerd.service
 
 [Service]
-ExecStart=/usr/local/bin/kubelet \
+ExecStart=/usr/bin/kubelet \
   --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.kubeconfig \
   --kubeconfig=/etc/kubernetes/kubelet.kubeconfig \
   --config=/etc/kubernetes/kubelet-conf.yml \

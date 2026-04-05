@@ -4,7 +4,7 @@ Documentation=https://github.com/kubernetes/kubernetes
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/kube-proxy \
+ExecStart=/usr/bin/kube-proxy \
   --config=/etc/kubernetes/kube-proxy.yaml \
   --v=2
 Restart=always

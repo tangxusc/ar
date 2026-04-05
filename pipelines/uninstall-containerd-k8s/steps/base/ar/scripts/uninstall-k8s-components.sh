@@ -32,6 +32,12 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 sudo rm -f \
+  /usr/bin/kube-apiserver \
+  /usr/bin/kube-controller-manager \
+  /usr/bin/kube-scheduler \
+  /usr/bin/kubelet \
+  /usr/bin/kube-proxy \
+  /usr/bin/kubectl \
   /usr/local/bin/kube-apiserver \
   /usr/local/bin/kube-controller-manager \
   /usr/local/bin/kube-scheduler \

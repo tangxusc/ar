@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-sudo mkdir -p /etc/cni/net.d /opt/cni/bin &&sudo tar xf /tmp/ar/tar/cni-plugins-linux-amd64-v*.tgz -C /opt/cni/bin/ 
-sudo tar -xzf /tmp/ar/tar/containerd-*-linux-amd64.tar.gz -C /usr/local/
+sudo mkdir -p /etc/cni/net.d /opt/cni/bin &&sudo tar xf /tmp/ar/tar/cni-plugins-linux-amd64-v*.tgz -C /opt/cni/bin/
+sudo tar -xzf /tmp/ar/tar/containerd-*-linux-amd64.tar.gz -C /usr/bin/ --strip-components=1
 # 安装runc
 if [ -f /tmp/ar/tar/runc.amd64 ]; then
   sudo install -m 0755 /tmp/ar/tar/runc.amd64 /usr/local/sbin/runc

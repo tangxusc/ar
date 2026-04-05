@@ -4,7 +4,7 @@ Documentation=https://github.com/kubernetes/kubernetes
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/kube-controller-manager \
+ExecStart=/usr/bin/kube-controller-manager \
   --v=2 \
   --bind-address=0.0.0.0 \
   --leader-elect=true \

@@ -30,19 +30,19 @@ echo "--- 步骤 1: 解压 K8s 二进制文件 ---"
 K8S_TARBALL="/tmp/ar/tar/kubernetes-server-linux-amd64.tar.gz"
 [[ -f "$K8S_TARBALL" ]] || die "K8s 包不存在: $K8S_TARBALL"
 
-sudo tar -xf "$K8S_TARBALL" --strip-components=3 -C /usr/local/bin/ \
+sudo tar -xf "$K8S_TARBALL" --strip-components=3 -C /usr/bin/ \
   kubernetes/server/bin/kube-apiserver \
   kubernetes/server/bin/kube-controller-manager \
   kubernetes/server/bin/kube-scheduler \
   kubernetes/server/bin/kubelet \
   kubernetes/server/bin/kube-proxy \
   kubernetes/server/bin/kubectl
-sudo chmod +x /usr/local/bin/kube-apiserver \
-  /usr/local/bin/kube-controller-manager \
-  /usr/local/bin/kube-scheduler \
-  /usr/local/bin/kubelet \
-  /usr/local/bin/kube-proxy \
-  /usr/local/bin/kubectl
+sudo chmod +x /usr/bin/kube-apiserver \
+  /usr/bin/kube-controller-manager \
+  /usr/bin/kube-scheduler \
+  /usr/bin/kubelet \
+  /usr/bin/kube-proxy \
+  /usr/bin/kubectl
 
 echo "K8s 二进制版本:"
 kube-apiserver --version || true

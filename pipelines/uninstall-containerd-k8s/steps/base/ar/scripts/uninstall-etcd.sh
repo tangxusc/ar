@@ -23,7 +23,7 @@ if command -v systemctl >/dev/null 2>&1; then
   sudo systemctl daemon-reload >/dev/null 2>&1 || true
 fi
 
-sudo rm -f /usr/local/bin/etcd /usr/local/bin/etcdctl || true
+sudo rm -f /usr/bin/etcd /usr/bin/etcdctl /usr/local/bin/etcd /usr/local/bin/etcdctl || true
 sudo rm -rf /etc/etcd /etc/kubernetes/pki/etcd || true
 
 if is_true "$PURGE_ETCD_DATA"; then

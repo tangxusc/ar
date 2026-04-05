@@ -18,6 +18,13 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 sudo rm -f \
+  /usr/bin/containerd \
+  /usr/bin/containerd-stress \
+  /usr/bin/containerd-shim \
+  /usr/bin/containerd-shim-runc-v1 \
+  /usr/bin/containerd-shim-runc-v2 \
+  /usr/bin/ctr \
+  /usr/bin/nerdctl \
   /usr/local/bin/containerd \
   /usr/local/bin/containerd-stress \
   /usr/local/bin/containerd-shim \

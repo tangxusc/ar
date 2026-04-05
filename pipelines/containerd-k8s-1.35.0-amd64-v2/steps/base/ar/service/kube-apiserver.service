@@ -4,7 +4,7 @@ Documentation=https://github.com/kubernetes/kubernetes
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/kube-apiserver \
+ExecStart=/usr/bin/kube-apiserver \
   --v=2 \
   --bind-address=0.0.0.0 \
   --advertise-address=REPLACE_NODE_IP \

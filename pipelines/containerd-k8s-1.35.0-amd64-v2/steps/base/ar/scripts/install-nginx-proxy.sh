@@ -30,7 +30,7 @@ if ! command -v nerdctl >/dev/null 2>&1; then
   tar -xzf "${nerdctl_tgz}" -C "${tmpdir}"
   nerdctl_bin="$(find "${tmpdir}" -maxdepth 2 -type f -name nerdctl | head -n1 || true)"
   [[ -n "${nerdctl_bin}" ]] || die "nerdctl 二进制文件未在 tarball 中找到: ${nerdctl_tgz}"
-  sudo install -m 0755 "${nerdctl_bin}" /usr/local/bin/nerdctl
+  sudo install -m 0755 "${nerdctl_bin}" /usr/bin/nerdctl
   echo "已安装 nerdctl: $(nerdctl --version || true)"
   trap - EXIT
   rm -rf "${tmpdir}"
