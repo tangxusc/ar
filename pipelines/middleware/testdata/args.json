@@ -1,4 +1,3 @@
 {
-  "registry_auth_username": "tanxtanx",
-  "registry_auth_password": "tanxtanx"
+  "install_istio": true
 }
