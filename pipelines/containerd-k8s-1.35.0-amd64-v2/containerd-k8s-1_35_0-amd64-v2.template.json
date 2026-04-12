@@ -36,6 +36,29 @@
     ],
     "env": ["SSHPASS={{$n.Password}}"],
     "nodes": [
+      "open-firewall-ports-{{$i}}"
+    ]
+  },
+  {{end}}
+  {{range $i, $n := .nodes}}
+  {
+    "name": "open-firewall-ports-{{$i}}",
+    "description": "打开K8s所需防火墙端口",
+    "image": "containerd-k8s-base-installer:1.35.0",
+    "entrypoint": "sshpass",
+    "args": [
+      "-e",
+      "ssh",
+      "-p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}}",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      "{{$n.Username}}@{{$n.IP}}",
+      "sudo bash /tmp/ar/scripts/open-firewall-ports.sh {{$n.LabelsStr}}"
+    ],
+    "env": ["SSHPASS={{$n.Password}}"],
+    "nodes": [
       "disable-swap-{{$i}}"
     ]
   },
