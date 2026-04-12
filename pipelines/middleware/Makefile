@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
-PIPELINE_NAME := istio
-PIPELINE_TEMPLATE := istio.template.json
+PIPELINE_NAME := middleware
+PIPELINE_TEMPLATE := middleware.template.json
 PIPELINE_IMAGE := pipeline-$(PIPELINE_NAME):latest
 PIPELINE_ROOT := $(CURDIR)
 NODE_FILE ?= testdata/node.json

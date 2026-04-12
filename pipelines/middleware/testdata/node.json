@@ -1,7 +1,7 @@
 [
     {
-        "ip": "43.135.126.17",
-        "intranet_ip": "172.19.16.15",
+        "ip": "43.154.201.23",
+        "intranet_ip": "172.19.0.5",
         "port": "22",
         "username": "ubuntu",
         "password": "Tcdn@2007",
@@ -15,24 +15,16 @@
                 "value": "master"
             },
             {
-                "key": "env",
-                "value": "dev"
-            },
-            {
-                "key": "zone",
-                "value": "shanghai"
-            },
-            {
                 "key": "registry",
                 "value": "true"
             }
         ]
     },
     {
-        "ip": "124.156.178.212",
-        "intranet_ip": "172.19.16.3",
+        "ip": "43.154.202.151",
+        "intranet_ip": "172.19.0.10",
         "port": "22",
-        "username": "ubuntu",
+        "username": "root",
         "password": "Tcdn@2007",
         "labels": [
             {
