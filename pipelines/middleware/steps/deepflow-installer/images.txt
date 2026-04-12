@@ -1,0 +1,4 @@
+registry.cn-beijing.aliyuncs.com/deepflow-ce/deepflow-server:latest
+registry.cn-beijing.aliyuncs.com/deepflow-ce/deepflow-agent:latest
+registry.cn-beijing.aliyuncs.com/deepflow-ce/clickhouse:23.8.9.54
+registry.cn-beijing.aliyuncs.com/deepflow-ce/grafana:latest

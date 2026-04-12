@@ -1,0 +1,2 @@
+docker.io/risingwavelabs/risingwave:v2.6.0
+docker.io/bitnami/etcd:3.5.16
