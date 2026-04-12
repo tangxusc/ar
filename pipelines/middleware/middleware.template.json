@@ -1,8 +1,10 @@
 [
+{{- $any := false}}
 {{- if arg .args "install_istio"}}
+{{- $any = true}}
   {
-    "name": "push-images",
-    "description": "推送离线镜像到私有仓库",
+    "name": "push-images-istio",
+    "description": "推送istio离线镜像到私有仓库",
     "image": "istio-installer:1.29.1",
     "entrypoint": "bash",
     "args": [
@@ -53,6 +55,125 @@
     "args": [
       "-lcx",
       "helm upgrade --install istio-gateway /ar/gateway-1.29.1.tgz --version 1.29.1 --namespace istio-system --create-namespace --wait"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ]
+  }
+{{- end}}
+{{- if arg .args "install_automq"}}
+{{- if $any}},{{end}}
+{{- $any = true}}
+  {
+    "name": "push-images-automq",
+    "description": "推送AutoMQ(Strimzi)离线镜像到私有仓库",
+    "image": "automq-installer:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
+    ],
+    "nodes": [
+      "install-automq"
+    ]
+  },
+  {
+    "name": "install-automq",
+    "description": "安装AutoMQ(基于Strimzi Kafka Operator)",
+    "image": "automq-installer:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "helm upgrade --install automq-strimzi-operator /ar/strimzi-kafka-operator-0.47.0.tgz --namespace automq --create-namespace --wait"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ]
+  }
+{{- end}}
+{{- if arg .args "install_flink"}}
+{{- if $any}},{{end}}
+{{- $any = true}}
+  {
+    "name": "push-images-flink",
+    "description": "推送Flink离线镜像到私有仓库",
+    "image": "flink-installer:1.11.0",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
+    ],
+    "nodes": [
+      "install-flink"
+    ]
+  },
+  {
+    "name": "install-flink",
+    "description": "安装Flink Kubernetes Operator",
+    "image": "flink-installer:1.11.0",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "helm upgrade --install flink-kubernetes-operator /ar/flink-kubernetes-operator-1.11.0.tgz --namespace flink --create-namespace --wait --set webhook.create=false --set defaultConfiguration.taskmanager.numberOfTaskSlots=2"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ]
+  }
+{{- end}}
+{{- if arg .args "install_risingwave"}}
+{{- if $any}},{{end}}
+{{- $any = true}}
+  {
+    "name": "push-images-risingwave",
+    "description": "推送RisingWave离线镜像到私有仓库",
+    "image": "risingwave-installer:v2.6.0",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
+    ],
+    "nodes": [
+      "install-risingwave"
+    ]
+  },
+  {
+    "name": "install-risingwave",
+    "description": "安装RisingWave流式数据库",
+    "image": "risingwave-installer:v2.6.0",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "helm upgrade --install risingwave /ar/risingwave-*.tgz --namespace risingwave --create-namespace --wait --set metaStore.etcd.enabled=true --set stateStore.s3.enabled=true --set stateStore.s3.endpoint={{arg .args "s3_endpoint"}} --set stateStore.s3.bucket={{arg .args "s3_bucket_risingwave"}} --set stateStore.s3.accessKey={{arg .args "s3_access_key"}} --set stateStore.s3.secretKey={{arg .args "s3_secret_key"}}"
+    ],
+    "env": [
+      "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"
+    ]
+  }
+{{- end}}
+{{- if arg .args "install_deepflow"}}
+{{- if $any}},{{end}}
+  {
+    "name": "push-images-deepflow",
+    "description": "推送DeepFlow离线镜像到私有仓库",
+    "image": "deepflow-installer:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
+    ],
+    "nodes": [
+      "install-deepflow"
+    ]
+  },
+  {
+    "name": "install-deepflow",
+    "description": "安装DeepFlow网络可观测性平台",
+    "image": "deepflow-installer:latest",
+    "entrypoint": "bash",
+    "args": [
+      "-lcx",
+      "helm upgrade --install deepflow /ar/deepflow-*.tgz --namespace deepflow --create-namespace --wait --set global.storageClass={{arg .args "rbd_storage_class"}}"
     ],
     "env": [
       "KUBECONFIG=/ar-data/kubeconfig/master.kubeconfig"

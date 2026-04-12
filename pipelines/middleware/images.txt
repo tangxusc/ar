@@ -1,1 +1,5 @@
 istio-installer:1.29.1
+automq-installer:latest
+flink-installer:1.11.0
+risingwave-installer:v2.6.0
+deepflow-installer:latest
