@@ -9,10 +9,26 @@
       "/ar/scripts/image-push.sh {{join "," (getNodeFieldValueByLabel .nodes "registry" "true" "IP")}} {{arg .args "registry_auth_username"}} {{arg .args "registry_auth_password"}}"
     ],
     "nodes": [
-      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"cleanup-cilium-{{$i}}"{{end}}
+      {{range $i, $n := .nodes}}{{if $i}}, {{end}}"open-firewall-ports-cilium-{{$i}}"{{end}}
     ]
   },
   {{range $i, $n := .nodes}}
+  {
+    "name": "open-firewall-ports-cilium-{{$i}}",
+    "description": "在节点 {{$n.IP}} 上开放 Cilium 所需防火墙端口",
+    "image": "cilium-installer:1.19.2",
+    "entrypoint": "bash",
+    "args": [
+      "-c",
+      "sshpass -e ssh -p {{if $n.Port}}{{$n.Port}}{{else}}22{{end}} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{$n.Username}}@{{$n.IP}} 'sudo bash -s' < /ar/scripts/open-cilium-firewall-ports.sh"
+    ],
+    "env": [
+      "SSHPASS={{$n.Password}}"
+    ],
+    "nodes": [
+      "cleanup-cilium-{{$i}}"
+    ]
+  },
   {
     "name": "cleanup-cilium-{{$i}}",
     "description": "清理节点 {{$n.IP}} 上遗留的 cilium 主机状态",

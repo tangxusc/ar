@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     bash \
     curl \
     net-tools \
+    openssh-client \
     rsync \
     skopeo \
     sshpass \
